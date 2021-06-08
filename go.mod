@@ -2,6 +2,8 @@ module github.com/ONSdigital/dp-import-cantabular-dimension-options
 
 go 1.16
 
+replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
+
 require (
 	github.com/ONSdigital/dp-component-test v0.3.1
 	github.com/ONSdigital/dp-healthcheck v1.0.5
