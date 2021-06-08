@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-import-cantabular-dimension-options
 
-go 1.14
+go 1.16
 
 require (
 	github.com/ONSdigital/dp-component-test v0.3.1
