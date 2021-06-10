@@ -6,6 +6,7 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
 )
 
 //go:generate moq -out mock/initialiser.go -pkg mock . Initialiser
@@ -16,6 +17,7 @@ import (
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
+	DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error)
 }
 
 // HTTPServer defines the required methods from the HTTP server
@@ -30,4 +32,9 @@ type HealthChecker interface {
 	Start(ctx context.Context)
 	Stop()
 	AddCheck(name string, checker healthcheck.Checker) (err error)
+}
+
+// EventConsumer defines the required methods from event Consumer
+type EventConsumer interface {
+	Close(ctx context.Context) (err error)
 }

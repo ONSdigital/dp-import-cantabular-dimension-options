@@ -9,30 +9,30 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	os.Clearenv()
-	var err error
-	var configuration *Config
-
 	Convey("Given an environment with no environment variables set", t, func() {
-		Convey("Then cfg should be nil", func() {
-			So(cfg, ShouldBeNil)
-		})
+		os.Clearenv()
+		cfg, err := Get()
 
 		Convey("When the config values are retrieved", func() {
 
-			Convey("Then there should be no error returned, and values are as expected", func() {
-				configuration, err = Get() // This Get() is only called once, when inside this function
+			Convey("Then there should be no error returned", func() {
 				So(err, ShouldBeNil)
-				So(configuration, ShouldResemble, &Config{
-					BindAddr:                   "localhost:26200",
-					GracefulShutdownTimeout:    5 * time.Second,
-					HealthCheckInterval:        30 * time.Second,
-					HealthCheckCriticalTimeout: 90 * time.Second,
-				})
+			})
+
+			Convey("Then the values should be set to the expected defaults", func() {
+				So(cfg.BindAddr, ShouldEqual, "localhost:26300")
+				So(cfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)
+				So(cfg.HealthCheckInterval, ShouldEqual, 30*time.Second)
+				So(cfg.HealthCheckCriticalTimeout, ShouldEqual, 90*time.Second)
+				So(cfg.KafkaAddr, ShouldHaveLength, 1)
+				So(cfg.KafkaAddr[0], ShouldEqual, "localhost:9092")
+				So(cfg.KafkaVersion, ShouldEqual, "1.0.2")
+				So(cfg.KafkaNumWorkers, ShouldEqual, 1)
+				So(cfg.HelloCalledGroup, ShouldEqual, "dp-import-cantabular-dimension-options")
+				So(cfg.HelloCalledTopic, ShouldEqual, "hello-called")
 			})
 
 			Convey("Then a second call to config should return the same config", func() {
-				// This achieves code coverage of the first return in the Get() function.
 				newCfg, newErr := Get()
 				So(newErr, ShouldBeNil)
 				So(newCfg, ShouldResemble, cfg)

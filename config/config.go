@@ -6,12 +6,20 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+// TODO: remove hello call config options
 // Config represents service configuration for dp-import-cantabular-dimension-options
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
+	KafkaAddr                  []string      `envconfig:"KAFKA_ADDR"                     json:"-"`
+	KafkaVersion               string        `envconfig:"KAFKA_VERSION"`
+	KafkaOffsetOldest          bool          `envconfig:"KAFKA_OFFSET_OLDEST"`
+	KafkaNumWorkers            int           `envconfig:"KAFKA_NUM_WORKERS"`
+	HelloCalledGroup           string        `envconfig:"HELLO_CALLED_GROUP"`
+	HelloCalledTopic           string        `envconfig:"HELLO_CALLED_TOPIC"`
+	OutputFilePath             string        `envconfig:"OUTPUT_FILE_PATH"`
 }
 
 var cfg *Config
@@ -24,10 +32,17 @@ func Get() (*Config, error) {
 	}
 
 	cfg = &Config{
-		BindAddr:                   "localhost:26200",
+		BindAddr:                   "localhost:26300",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
+		KafkaAddr:                  []string{"localhost:9092"},
+		KafkaVersion:               "1.0.2",
+		KafkaOffsetOldest:          true,
+		KafkaNumWorkers:            1,
+		HelloCalledGroup:           "dp-import-cantabular-dimension-options",
+		HelloCalledTopic:           "hello-called",
+		OutputFilePath:             "/tmp/helloworld.txt",
 	}
 
 	return cfg, envconfig.Process("", cfg)

@@ -11,7 +11,7 @@ all: audit test build
 
 .PHONY: audit
 audit:
-	go list -json -m all | nancy sleuth --exclude-vulnerability-file ./.nancy-ignore
+	go list -m all | nancy sleuth
 
 .PHONY: build
 build:
@@ -25,6 +25,10 @@ debug:
 .PHONY: test
 test:
 	go test -race -cover ./...
+
+.PHONY: produce
+produce:
+	HUMAN_LOG=1 go run cmd/producer/main.go
 
 .PHONY: convey
 convey:

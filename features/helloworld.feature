@@ -3,5 +3,7 @@ Feature: Helloworld
 
 
   Scenario: Posting and checking a response
-    When I GET "/hello"
+    When these hello events are consumed:
+            | RecipientName | 
+            | Tim           |
     Then I should receive a hello-world response

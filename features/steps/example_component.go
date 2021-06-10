@@ -2,78 +2,65 @@ package steps
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service/mock"
 	"net/http"
+	"os"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service/mock"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
+	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
+	dphttp "github.com/ONSdigital/dp-net/http"
 )
 
 type Component struct {
 	componenttest.ErrorFeature
-	svcList        *service.ExternalServiceList
-	svc            *service.Service
-	errorChan      chan error
-	Config         *config.Config
-	HTTPServer     *http.Server
-	ServiceRunning bool
-	apiFeature     *componenttest.APIFeature
+	serviceList   *service.ExternalServiceList
+	KafkaConsumer kafka.IConsumerGroup
+	killChannel   chan os.Signal
+	apiFeature    *componenttest.APIFeature
+	errorChan     chan error
+	svc           *service.Service
+	cfg           *config.Config
 }
 
-func NewComponent() (*Component, error) {
+func NewComponent() *Component {
 
-	c := &Component{
-		HTTPServer:     &http.Server{},
-		errorChan:      make(chan error),
-		ServiceRunning: false,
-	}
+	c := &Component{errorChan: make(chan error)}
 
-	var err error
+	consumer := kafkatest.NewMessageConsumer(false)
+	consumer.CheckerFunc = funcCheck
+	c.KafkaConsumer = consumer
 
-	c.Config, err = config.Get()
+	cfg, err := config.Get()
 	if err != nil {
-		return nil, err
+		return nil
 	}
+
+	c.cfg = cfg
 
 	initMock := &mock.InitialiserMock{
-		DoGetHealthCheckFunc: c.DoGetHealthcheckOk,
-		DoGetHTTPServerFunc:  c.DoGetHTTPServer,
+		DoGetKafkaConsumerFunc: c.DoGetConsumer,
+		DoGetHealthCheckFunc:   c.DoGetHealthCheck,
+		DoGetHTTPServerFunc:    c.DoGetHTTPServer,
 	}
 
-	c.svcList = service.NewServiceList(initMock)
+	c.serviceList = service.NewServiceList(initMock)
 
-	c.apiFeature = componenttest.NewAPIFeature(c.InitialiseService)
-
-	return c, nil
-}
-
-func (c *Component) Reset() *Component {
-	c.apiFeature.Reset()
 	return c
 }
 
-func (c *Component) Close() error {
-	if c.svc != nil && c.ServiceRunning {
-		c.svc.Close(context.Background())
-		c.ServiceRunning = false
-	}
-	return nil
+func (c *Component) Close() {
+	os.Remove(c.cfg.OutputFilePath)
 }
 
-func (c *Component) InitialiseService() (http.Handler, error) {
-	var err error
-	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
-	if err != nil {
-		return nil, err
-	}
-
-	c.ServiceRunning = true
-	return c.HTTPServer.Handler, nil
+func (c *Component) Reset() {
+	os.Remove(c.cfg.OutputFilePath)
 }
 
-func (c *Component) DoGetHealthcheckOk(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
+func (c *Component) DoGetHealthCheck(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 	return &mock.HealthCheckerMock{
 		AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 		StartFunc:    func(ctx context.Context) {},
@@ -82,7 +69,13 @@ func (c *Component) DoGetHealthcheckOk(cfg *config.Config, buildTime string, git
 }
 
 func (c *Component) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
-	c.HTTPServer.Addr = bindAddr
-	c.HTTPServer.Handler = router
-	return c.HTTPServer
+	return dphttp.NewServer(bindAddr, router)
+}
+
+func (c *Component) DoGetConsumer(ctx context.Context, cfg *config.Config) (kafkaConsumer kafka.IConsumerGroup, err error) {
+	return c.KafkaConsumer, nil
+}
+
+func funcCheck(ctx context.Context, state *healthcheck.CheckState) error {
+	return nil
 }

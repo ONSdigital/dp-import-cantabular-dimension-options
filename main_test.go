@@ -18,17 +18,14 @@ type ComponentTest struct {
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	component, err := steps.NewComponent()
-	if err != nil {
-		panic(err)
-	}
+	component := steps.NewComponent()
 
 	ctx.BeforeScenario(func(*godog.Scenario) {
 		component.Reset()
 	})
 
 	ctx.AfterScenario(func(*godog.Scenario, error) {
-		_ = component.Close()
+		component.Close()
 	})
 
 	component.RegisterSteps(ctx)
