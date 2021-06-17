@@ -10,7 +10,6 @@ import (
 
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service"
 	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
 	"github.com/cucumber/godog"
 	"github.com/rdumont/assistdog"
@@ -44,7 +43,7 @@ func (c *Component) theseHelloEventsAreConsumed(table *godog.Table) error {
 
 	// run application in separate goroutine
 	go func() {
-		c.svc, err = service.Run(context.Background(), c.serviceList, "", "", "", c.errorChan)
+		c.svc.Start(context.Background(), c.errorChan)
 	}()
 
 	// consume extracted observations

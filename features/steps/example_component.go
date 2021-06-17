@@ -2,6 +2,7 @@ package steps
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -17,7 +18,6 @@ import (
 
 type Component struct {
 	componenttest.ErrorFeature
-	serviceList   *service.ExternalServiceList
 	KafkaConsumer kafka.IConsumerGroup
 	killChannel   chan os.Signal
 	apiFeature    *componenttest.APIFeature
@@ -41,13 +41,15 @@ func NewComponent() *Component {
 
 	c.cfg = cfg
 
-	initMock := &mock.InitialiserMock{
-		DoGetKafkaConsumerFunc: c.DoGetConsumer,
-		DoGetHealthCheckFunc:   c.DoGetHealthCheck,
-		DoGetHTTPServerFunc:    c.DoGetHTTPServer,
-	}
+	service.GetKafkaConsumer = c.GetConsumer
+	service.GetHealthCheck = c.GetHealthCheck
+	service.GetHTTPServer = c.GetHTTPServer
 
-	c.serviceList = service.NewServiceList(initMock)
+	c.svc = service.New()
+	err = c.svc.Init(context.Background(), cfg, "", "", "")
+	if err != nil {
+		panic(fmt.Errorf("unexpected service Init error in NewComponent: %w", err))
+	}
 
 	return c
 }
@@ -60,7 +62,7 @@ func (c *Component) Reset() {
 	os.Remove(c.cfg.OutputFilePath)
 }
 
-func (c *Component) DoGetHealthCheck(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
+func (c *Component) GetHealthCheck(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 	return &mock.HealthCheckerMock{
 		AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 		StartFunc:    func(ctx context.Context) {},
@@ -68,11 +70,11 @@ func (c *Component) DoGetHealthCheck(cfg *config.Config, buildTime string, gitCo
 	}, nil
 }
 
-func (c *Component) DoGetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
+func (c *Component) GetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
 	return dphttp.NewServer(bindAddr, router)
 }
 
-func (c *Component) DoGetConsumer(ctx context.Context, cfg *config.Config) (kafkaConsumer kafka.IConsumerGroup, err error) {
+func (c *Component) GetConsumer(ctx context.Context, cfg *config.Config) (kafkaConsumer kafka.IConsumerGroup, err error) {
 	return c.KafkaConsumer, nil
 }
 

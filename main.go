@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service"
-	"github.com/ONSdigital/log.go/log"
-	"github.com/pkg/errors"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 const serviceName = "dp-import-cantabular-dimension-options"
@@ -26,7 +27,7 @@ func main() {
 	ctx := context.Background()
 
 	if err := run(ctx); err != nil {
-		log.Event(ctx, "fatal runtime error", log.Error(err), log.FATAL)
+		log.Error(ctx, "fatal runtime error", err)
 		os.Exit(1)
 	}
 }
@@ -34,21 +35,30 @@ func main() {
 func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
-
-	// Run the service, providing an error channel for fatal errors
 	svcErrors := make(chan error, 1)
-	svcList := service.NewServiceList(&service.Init{})
-	svc, err := service.Run(ctx, svcList, BuildTime, GitCommit, Version, svcErrors)
+
+	// Read config
+	cfg, err := config.Get()
 	if err != nil {
-		return errors.Wrap(err, "running service failed")
+		log.Error(ctx, "unable to retrieve configuration", err)
+		return err
 	}
+
+	// Run the service
+	svc := service.New()
+	if err := svc.Init(ctx, cfg, BuildTime, GitCommit, Version); err != nil {
+		return fmt.Errorf("running service failed with error: %w", err)
+	}
+	svc.Start(ctx, svcErrors)
 
 	// blocks until an os interrupt or a fatal error occurs
 	select {
 	case err := <-svcErrors:
-		log.Event(ctx, "service error received", log.ERROR, log.Error(err))
+		log.Error(ctx, "service error received", err)
+		svc.Close(ctx)
+		return err
 	case sig := <-signals:
-		log.Event(ctx, "os signal received", log.Data{"signal": sig}, log.INFO)
+		log.Info(ctx, "os signal received", log.Data{"signal": sig})
 	}
 	return svc.Close(ctx)
 }

@@ -1,29 +1,40 @@
-package event_test
+package event
 
 import (
+	"context"
 	"os"
 	"testing"
 
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	. "github.com/smartystreets/goconvey/convey"
+)
+
+var (
+	testEvent = HelloCalled{
+		RecipientName: "World",
+	}
 )
 
 // TODO: remove hello called example test
 func TestHelloCalledHandler_Handle(t *testing.T) {
+	ctx := context.Background()
 
 	Convey("Given a successful event handler, when Handle is triggered", t, func() {
-		eventHandler := &event.HelloCalledHandler{}
 		filePath := "/tmp/helloworld.txt"
+		eventHandler := &HelloCalledHandler{
+			cfg: config.Config{OutputFilePath: filePath},
+		}
 		os.Remove(filePath)
-		err := eventHandler.Handle(testCtx, &config.Config{OutputFilePath: filePath}, &testEvent)
+		err := eventHandler.Handle(ctx, &testEvent)
 		So(err, ShouldBeNil)
 	})
 
 	Convey("handler returns an error when cannot write to file", t, func() {
-		eventHandler := &event.HelloCalledHandler{}
 		filePath := ""
-		err := eventHandler.Handle(testCtx, &config.Config{OutputFilePath: filePath}, &testEvent)
+		eventHandler := &HelloCalledHandler{
+			cfg: config.Config{OutputFilePath: filePath},
+		}
+		err := eventHandler.Handle(ctx, &testEvent)
 		So(err, ShouldNotBeNil)
 	})
 }
