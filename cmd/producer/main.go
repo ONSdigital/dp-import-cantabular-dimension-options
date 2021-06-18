@@ -29,11 +29,11 @@ func main() {
 
 	// Create Kafka Producer
 	pChannels := kafka.CreateProducerChannels()
-	kafkaProducer, err := kafka.NewProducer(ctx, config.KafkaAddr, config.HelloCalledTopic, pChannels, &kafka.ProducerConfig{
+	kafkaProducer, err := kafka.NewProducer(ctx, config.KafkaAddr, config.CategoryDimensionImportTopic, pChannels, &kafka.ProducerConfig{
 		KafkaVersion: &config.KafkaVersion,
 	})
 	if err != nil {
-		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": config.HelloCalledTopic})
+		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": config.CategoryDimensionImportTopic})
 		os.Exit(1)
 	}
 
@@ -44,30 +44,42 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		e := scanEvent(scanner)
-		log.Event(ctx, "sending hello-called event", log.INFO, log.Data{"helloCalledEvent": e})
+		log.Event(ctx, "sending category-dimension-import event", log.INFO, log.Data{"CategoryDimensionImportEvent": e})
 
-		bytes, err := schema.HelloCalledEvent.Marshal(e)
+		bytes, err := schema.CategoryDimensionImport.Marshal(e)
 		if err != nil {
-			log.Fatal(ctx, "hello-called event error", err)
+			log.Fatal(ctx, "category-dimension-import event error", err)
 			os.Exit(1)
 		}
 
-		// Send bytes to Output channel, after calling Initialise just in case it is not initialised.
-		kafkaProducer.Initialise(ctx)
+		// Wait for producer to be initialised
+		<-kafkaProducer.Channels().Ready
+
+		// Send bytes to output channel
 		kafkaProducer.Channels().Output <- bytes
 	}
 }
 
-// scanEvent creates a HelloCalled event according to the user input
-func scanEvent(scanner *bufio.Scanner) *event.HelloCalled {
-	fmt.Println("--- [Send Kafka HelloCalled] ---")
+// scanEvent creates a CategoryDimensionImport event according to the user input
+func scanEvent(scanner *bufio.Scanner) *event.CategoryDimensionImport {
+	fmt.Println("--- [Send Kafka CategoryDimensionImport] ---")
 
-	fmt.Println("Please type the recipient name")
+	e := &event.CategoryDimensionImport{}
+
+	fmt.Println("Please type the Job ID")
 	fmt.Printf("$ ")
 	scanner.Scan()
-	name := scanner.Text()
+	e.JobID = scanner.Text()
 
-	return &event.HelloCalled{
-		RecipientName: name,
-	}
+	fmt.Println("Please type the Dimension ID")
+	fmt.Printf("$ ")
+	scanner.Scan()
+	e.DimensionID = scanner.Text()
+
+	fmt.Println("Please type the Instance ID")
+	fmt.Printf("$ ")
+	scanner.Scan()
+	e.InstanceID = scanner.Text()
+
+	return e
 }

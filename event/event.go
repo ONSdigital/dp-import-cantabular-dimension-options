@@ -1,7 +1,8 @@
 package event
 
-// TODO: remove hello called example model
-// HelloCalled provides an avro structure for a Hello Called event
-type HelloCalled struct {
-	RecipientName string `avro:"recipient_name"`
+// TODO: use dp-import struct when available
+type CategoryDimensionImport struct {
+	JobID       string `avro:"job_id"`
+	InstanceID  string `avro:"instance_id"`
+	DimensionID string `avro:"dimension_id"`
 }

@@ -8,7 +8,7 @@ import (
 
 // Handler represents a handler for processing a single event.
 type Handler interface {
-	Handle(context.Context, *HelloCalled) error
+	Handle(ctx context.Context, categoryDimensionImport *CategoryDimensionImport) error
 }
 
 type coder interface {

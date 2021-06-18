@@ -4,16 +4,17 @@ import (
 	"github.com/ONSdigital/go-ns/avro"
 )
 
-// TODO: remove or replace hello called structure and model with app specific
-var helloCalledEvent = `{
+// Define here until finalised and added do dp-import/events
+var categoryDimensionImport = `{
   "type": "record",
-  "name": "hello-called",
+  "name": "cantabular-dataset-instance-started",
   "fields": [
-    {"name": "recipient_name", "type": "string", "default": ""}
+    {"name": "dimension_id",   "type": "string"},
+    {"name": "job_id", "type": "string"},
+    {"name": "instance_id", "type": "string"}
   ]
 }`
 
-// HelloCalledEvent is the Avro schema for Hello Called messages.
-var HelloCalledEvent = &avro.Schema{
-	Definition: helloCalledEvent,
+var CategoryDimensionImport = &avro.Schema{
+	Definition: categoryDimensionImport,
 }

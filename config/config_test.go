@@ -28,8 +28,8 @@ func TestConfig(t *testing.T) {
 				So(cfg.KafkaAddr[0], ShouldEqual, "localhost:9092")
 				So(cfg.KafkaVersion, ShouldEqual, "1.0.2")
 				So(cfg.KafkaNumWorkers, ShouldEqual, 1)
-				So(cfg.HelloCalledGroup, ShouldEqual, "dp-import-cantabular-dimension-options")
-				So(cfg.HelloCalledTopic, ShouldEqual, "hello-called")
+				So(cfg.CategoryDimensionImportGroup, ShouldEqual, "dp-import-cantabular-dimension-options")
+				So(cfg.CategoryDimensionImportTopic, ShouldEqual, "cantabular-dataset-category-dimension-import")
 			})
 
 			Convey("Then a second call to config should return the same config", func() {

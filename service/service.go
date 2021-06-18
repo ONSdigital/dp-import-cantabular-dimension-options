@@ -8,6 +8,7 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler"
 	dpkafka "github.com/ONSdigital/dp-kafka/v2"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
 	dphttp "github.com/ONSdigital/dp-net/http"
@@ -34,8 +35,8 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IC
 	return dpkafka.NewConsumerGroup(
 		ctx,
 		cfg.KafkaAddr,
-		cfg.HelloCalledTopic,
-		cfg.HelloCalledGroup,
+		cfg.CategoryDimensionImportTopic,
+		cfg.CategoryDimensionImportGroup,
 		cgChannels,
 		&dpkafka.ConsumerGroupConfig{
 			KafkaVersion: &cfg.KafkaVersion,
@@ -103,13 +104,13 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	log.Info(ctx, "starting service...")
 
 	// Start kafka error logging
-	svc.consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.cfg.HelloCalledTopic)
+	svc.consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.cfg.CategoryDimensionImportTopic)
 
 	// Start consuming Kafka messages with the Event Handler
 	event.Consume(
 		ctx,
 		svc.consumer,
-		event.NewHelloCalledHandler(
+		handler.NewCategoryDimensionImport(
 			*svc.cfg,
 		),
 		svc.cfg.KafkaNumWorkers,

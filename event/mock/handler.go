@@ -23,7 +23,7 @@ var _ event.Handler = &HandlerMock{}
 //
 //         // make and configure a mocked event.Handler
 //         mockedHandler := &HandlerMock{
-//             HandleFunc: func(in1 context.Context, in2 *event.HelloCalled) error {
+//             HandleFunc: func(ctx context.Context, categoryDimensionImport *event.CategoryDimensionImport) error {
 // 	               panic("mock out the Handle method")
 //             },
 //         }
@@ -34,48 +34,48 @@ var _ event.Handler = &HandlerMock{}
 //     }
 type HandlerMock struct {
 	// HandleFunc mocks the Handle method.
-	HandleFunc func(in1 context.Context, in2 *event.HelloCalled) error
+	HandleFunc func(ctx context.Context, categoryDimensionImport *event.CategoryDimensionImport) error
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// Handle holds details about calls to the Handle method.
 		Handle []struct {
-			// In1 is the in1 argument value.
-			In1 context.Context
-			// In2 is the in2 argument value.
-			HelloCalled *event.HelloCalled
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// CategoryDimensionImport is the categoryDimensionImport argument value.
+			CategoryDimensionImport *event.CategoryDimensionImport
 		}
 	}
 }
 
 // Handle calls HandleFunc.
-func (mock *HandlerMock) Handle(in1 context.Context, in2 *event.HelloCalled) error {
+func (mock *HandlerMock) Handle(ctx context.Context, categoryDimensionImport *event.CategoryDimensionImport) error {
 	if mock.HandleFunc == nil {
 		panic("HandlerMock.HandleFunc: method is nil but Handler.Handle was just called")
 	}
 	callInfo := struct {
-		In1         context.Context
-		HelloCalled *event.HelloCalled
+		Ctx                     context.Context
+		CategoryDimensionImport *event.CategoryDimensionImport
 	}{
-		In1:         in1,
-		HelloCalled: in2,
+		Ctx:                     ctx,
+		CategoryDimensionImport: categoryDimensionImport,
 	}
 	lockHandlerMockHandle.Lock()
 	mock.calls.Handle = append(mock.calls.Handle, callInfo)
 	lockHandlerMockHandle.Unlock()
-	return mock.HandleFunc(in1, in2)
+	return mock.HandleFunc(ctx, categoryDimensionImport)
 }
 
 // HandleCalls gets all the calls that were made to Handle.
 // Check the length with:
 //     len(mockedHandler.HandleCalls())
 func (mock *HandlerMock) HandleCalls() []struct {
-	In1         context.Context
-	HelloCalled *event.HelloCalled
+	Ctx                     context.Context
+	CategoryDimensionImport *event.CategoryDimensionImport
 } {
 	var calls []struct {
-		In1         context.Context
-		HelloCalled *event.HelloCalled
+		Ctx                     context.Context
+		CategoryDimensionImport *event.CategoryDimensionImport
 	}
 	lockHandlerMockHandle.RLock()
 	calls = mock.calls.Handle

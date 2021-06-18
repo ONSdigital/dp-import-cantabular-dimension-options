@@ -11,8 +11,6 @@ import (
 
 //go:generate moq -out mock/handler.go -pkg mock . Handler
 
-// TODO: remove or replace hello called logic with app specific
-
 // Consume converts messages to event instances, and pass the event to the provided handler.
 func Consume(ctx context.Context, cg kafka.IConsumerGroup, h Handler, numWorkers int) {
 	// consume loop, to be executed by each worker
@@ -52,8 +50,8 @@ func Consume(ctx context.Context, cg kafka.IConsumerGroup, h Handler, numWorkers
 func processMessage(ctx context.Context, msg kafka.Message, h Handler) error {
 	defer msg.Commit()
 
-	var e HelloCalled
-	s := schema.HelloCalledEvent
+	var e CategoryDimensionImport
+	s := schema.CategoryDimensionImport
 
 	// unmarshal - commit on failure (consuming the message again would result in the same error)
 	if err := s.Unmarshal(msg.GetData(), &e); err != nil {

@@ -17,8 +17,8 @@ import (
 )
 
 func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
-	ctx.Step(`^these hello events are consumed:$`, c.theseHelloEventsAreConsumed)
-	ctx.Step(`^I should receive a hello-world response$`, c.iShouldReceiveAHelloworldResponse)
+	// ctx.Step(`^these hello events are consumed:$`, c.theseHelloEventsAreConsumed)
+	// ctx.Step(`^I should receive a hello-world response$`, c.iShouldReceiveAHelloworldResponse)
 }
 
 func (c *Component) iShouldReceiveAHelloworldResponse() error {
@@ -61,17 +61,17 @@ func (c *Component) theseHelloEventsAreConsumed(table *godog.Table) error {
 	return nil
 }
 
-func (c *Component) convertToHelloEvents(table *godog.Table) ([]*event.HelloCalled, error) {
+func (c *Component) convertToHelloEvents(table *godog.Table) ([]*event.CategoryDimensionImport, error) {
 	assist := assistdog.NewDefault()
-	events, err := assist.CreateSlice(&event.HelloCalled{}, table)
+	events, err := assist.CreateSlice(&event.CategoryDimensionImport{}, table)
 	if err != nil {
 		return nil, err
 	}
-	return events.([]*event.HelloCalled), nil
+	return events.([]*event.CategoryDimensionImport), nil
 }
 
-func (c *Component) sendToConsumer(e *event.HelloCalled) error {
-	bytes, err := schema.HelloCalledEvent.Marshal(e)
+func (c *Component) sendToConsumer(e *event.CategoryDimensionImport) error {
+	bytes, err := schema.CategoryDimensionImport.Marshal(e)
 	if err != nil {
 		return err
 	}
