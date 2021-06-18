@@ -139,7 +139,7 @@ func (svc *Service) Close(ctx context.Context) error {
 		// stop healthcheck, as it depends on everything else
 		if svc.healthCheck != nil {
 			svc.healthCheck.Stop()
-			log.Event(ctx, "stopped health checker", log.INFO)
+			log.Info(ctx, "stopped health checker")
 		}
 
 		// If kafka consumer exists, stop listening to it.
@@ -159,7 +159,7 @@ func (svc *Service) Close(ctx context.Context) error {
 				log.Error(ctx, "failed to shutdown http server", err)
 				hasShutdownError = true
 			}
-			log.Event(ctx, "stopped http server", log.INFO)
+			log.Info(ctx, "stopped http server")
 		}
 
 		// If kafka consumer exists, close it.
@@ -188,7 +188,7 @@ func (svc *Service) Close(ctx context.Context) error {
 		return err
 	}
 
-	log.Event(ctx, "graceful shutdown was successful", log.INFO)
+	log.Info(ctx, "graceful shutdown was successful")
 	return nil
 }
 
