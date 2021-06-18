@@ -11,7 +11,7 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 const serviceName = "dp-import-cantabular-dimension-options"
@@ -23,7 +23,7 @@ func main() {
 	// Get Config
 	config, err := config.Get()
 	if err != nil {
-		log.Event(ctx, "error getting config", log.FATAL, log.Error(err))
+		log.Fatal(ctx, "error getting config", err)
 		os.Exit(1)
 	}
 
@@ -33,7 +33,7 @@ func main() {
 		KafkaVersion: &config.KafkaVersion,
 	})
 	if err != nil {
-		log.Event(ctx, "fatal error trying to create kafka producer", log.FATAL, log.Error(err), log.Data{"topic": config.HelloCalledTopic})
+		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": config.HelloCalledTopic})
 		os.Exit(1)
 	}
 
@@ -48,7 +48,7 @@ func main() {
 
 		bytes, err := schema.HelloCalledEvent.Marshal(e)
 		if err != nil {
-			log.Event(ctx, "hello-called event error", log.FATAL, log.Error(err))
+			log.Fatal(ctx, "hello-called event error", err)
 			os.Exit(1)
 		}
 

@@ -106,7 +106,14 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	svc.consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.cfg.HelloCalledTopic)
 
 	// Start consuming Kafka messages with the Event Handler
-	event.Consume(ctx, svc.consumer, &event.HelloCalledHandler{}, svc.cfg.KafkaNumWorkers)
+	event.Consume(
+		ctx,
+		svc.consumer,
+		event.NewHelloCalledHandler(
+			*svc.cfg,
+		),
+		svc.cfg.KafkaNumWorkers,
+	)
 
 	// Start health checker
 	svc.healthCheck.Start(ctx)

@@ -10,7 +10,6 @@ require (
 	github.com/ONSdigital/dp-kafka/v2 v2.2.1
 	github.com/ONSdigital/dp-net v1.0.12
 	github.com/ONSdigital/go-ns v0.0.0-20210410105122-6d6a140e952e
-	github.com/ONSdigital/log.go v1.0.1
 	github.com/ONSdigital/log.go/v2 v2.0.0
 	github.com/cucumber/godog v0.11.0
 	github.com/gorilla/mux v1.8.0

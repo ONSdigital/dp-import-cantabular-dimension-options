@@ -15,6 +15,12 @@ type HelloCalledHandler struct {
 	cfg config.Config
 }
 
+func NewHelloCalledHandler(cfg config.Config) *HelloCalledHandler {
+	return &HelloCalledHandler{
+		cfg: cfg,
+	}
+}
+
 // Handle takes a single event.
 func (h *HelloCalledHandler) Handle(ctx context.Context, event *HelloCalled) (err error) {
 	logData := log.Data{
