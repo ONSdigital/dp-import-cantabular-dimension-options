@@ -44,7 +44,7 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		e := scanEvent(scanner)
-		log.Event(ctx, "sending category-dimension-import event", log.INFO, log.Data{"CategoryDimensionImportEvent": e})
+		log.Info(ctx, "sending category-dimension-import event", log.Data{"CategoryDimensionImportEvent": e})
 
 		bytes, err := schema.CategoryDimensionImport.Marshal(e)
 		if err != nil {

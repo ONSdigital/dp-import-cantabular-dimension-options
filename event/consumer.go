@@ -32,7 +32,7 @@ func Consume(ctx context.Context, cg kafka.IConsumerGroup, h Handler, numWorkers
 
 				msg.Release()
 			case <-cg.Channels().Closer:
-				log.Event(ctx, "closing event consumer loop because closer channel is closed", log.INFO, log.Data{"worker_id": workerID})
+				log.Info(ctx, "closing event consumer loop because closer channel is closed", log.Data{"worker_id": workerID})
 				return
 			}
 		}
