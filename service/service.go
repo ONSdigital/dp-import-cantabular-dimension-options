@@ -23,6 +23,7 @@ type Service struct {
 	server      HTTPServer
 	healthCheck HealthChecker
 	consumer    kafka.IConsumerGroup
+	producer    kafka.IProducer
 }
 
 // GetKafkaConsumer returns a Kafka consumer with the provided config
@@ -41,6 +42,20 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IC
 		&dpkafka.ConsumerGroupConfig{
 			KafkaVersion: &cfg.KafkaVersion,
 			Offset:       &kafkaOffset,
+		},
+	)
+}
+
+// GetKafkaProducer returns a kafka producer with the provided config
+var GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
+	return kafka.NewProducer(
+		ctx,
+		cfg.KafkaAddr,
+		cfg.InstanceCompleteTopic,
+		kafka.CreateProducerChannels(),
+		&kafka.ProducerConfig{
+			KafkaVersion:    &cfg.KafkaVersion,
+			MaxMessageBytes: &cfg.KafkaMaxBytes,
 		},
 	)
 }
@@ -82,6 +97,12 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Config, buildTime, git
 		return fmt.Errorf("failed to initialise kafka consumer: %w", err)
 	}
 
+	// Get Kafka producer
+	svc.producer, err = GetKafkaProducer(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to initialise kafka producer: %w", err)
+	}
+
 	// Get HealthCheck
 	if svc.healthCheck, err = GetHealthCheck(cfg, buildTime, gitCommit, version); err != nil {
 		return fmt.Errorf("could not instantiate healthcheck: %w", err)
@@ -105,6 +126,7 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 
 	// Start kafka error logging
 	svc.consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.cfg.CategoryDimensionImportTopic)
+	svc.producer.Channels().LogErrors(ctx, "error received from kafka producer, topic: "+svc.cfg.InstanceCompleteTopic)
 
 	// Start consuming Kafka messages with the Event Handler
 	event.Consume(
@@ -163,6 +185,15 @@ func (svc *Service) Close(ctx context.Context) error {
 			log.Info(ctx, "stopped http server")
 		}
 
+		// If kafka producer exists, close it.
+		if svc.producer != nil {
+			if err := svc.producer.Close(ctx); err != nil {
+				log.Error(ctx, "error closing kafka producer", err)
+				hasShutdownError = true
+			}
+			log.Event(ctx, "closed kafka producer", log.INFO)
+		}
+
 		// If kafka consumer exists, close it.
 		if svc.consumer != nil {
 			if err := svc.consumer.Close(ctx); err != nil {
@@ -199,6 +230,10 @@ func (svc *Service) registerCheckers() error {
 
 	if err := hc.AddCheck("Kafka consumer", svc.consumer.Checker); err != nil {
 		return fmt.Errorf("error adding check for Kafka consumer: %w", err)
+	}
+
+	if err := hc.AddCheck("Kafka producer", svc.producer.Checker); err != nil {
+		return fmt.Errorf("error adding check for Kafka producer: %w", err)
 	}
 
 	return nil

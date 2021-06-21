@@ -28,6 +28,7 @@ An example event can be created using the helper script, `make produce`.
 | KAFKA_NUM_WORKERS               | 1                                            | The maximum number of parallel kafka consumers
 | CATEGORY_DIMENSION_IMPORT_GROUP | dp-import-cantabular-dimension-options       | The consumer group this application to consume ImageUploaded messages
 | CATEGORY_DIMENSION_IMPORT_TOPIC | cantabular-dataset-category-dimension-import | The name of the topic to consume messages from
+| INSTANCE_COMPLETE_TOPIC         | cantabular-dataset-instance-complete         | The name of the topic to produce
 
 ### Healthcheck
 
