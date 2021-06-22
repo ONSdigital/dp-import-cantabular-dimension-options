@@ -40,8 +40,7 @@ func run(ctx context.Context) error {
 	// Read config
 	cfg, err := config.Get()
 	if err != nil {
-		log.Error(ctx, "unable to retrieve configuration", err)
-		return err
+		return fmt.Errorf("unable to retrieve configuration, error: %w", err)
 	}
 
 	// Run the service
@@ -54,7 +53,7 @@ func run(ctx context.Context) error {
 	// blocks until an os interrupt or a fatal error occurs
 	select {
 	case err := <-svcErrors:
-		log.Error(ctx, "service error received", err)
+		err = fmt.Errorf("service error received: %w", err)
 		svc.Close(ctx)
 		return err
 	case sig := <-signals:
