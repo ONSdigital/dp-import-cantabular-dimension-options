@@ -209,15 +209,12 @@ func (svc *Service) Close(ctx context.Context) error {
 
 	// timeout expired
 	if ctx.Err() == context.DeadlineExceeded {
-		log.Error(ctx, "shutdown timed out", ctx.Err())
-		return ctx.Err()
+		return fmt.Errorf("shutdown timed out: %w", ctx.Err())
 	}
 
 	// other error
 	if hasShutdownError {
-		err := fmt.Errorf("failed to shutdown gracefully")
-		log.Error(ctx, "failed to shutdown gracefully ", err)
-		return err
+		return fmt.Errorf("failed to shutdown gracefully")
 	}
 
 	log.Info(ctx, "graceful shutdown was successful")
