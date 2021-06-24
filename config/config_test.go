@@ -31,6 +31,9 @@ func TestConfig(t *testing.T) {
 				So(cfg.KafkaNumWorkers, ShouldEqual, 1)
 				So(cfg.CategoryDimensionImportGroup, ShouldEqual, "dp-import-cantabular-dimension-options")
 				So(cfg.CategoryDimensionImportTopic, ShouldEqual, "cantabular-dataset-category-dimension-import")
+				So(cfg.DatasetAPIURL, ShouldEqual, "http://localhost:22000")
+				So(cfg.CantabularURL, ShouldEqual, "http://localhost:8491")
+				So(cfg.ServiceAuthToken, ShouldEqual, "")
 			})
 
 			Convey("Then a second call to config should return the same config", func() {

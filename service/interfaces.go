@@ -9,6 +9,8 @@ import (
 
 //go:generate moq -out mock/server.go -pkg mock . HTTPServer
 //go:generate moq -out mock/healthCheck.go -pkg mock . HealthChecker
+//go:generate moq -out mock/cantabular-client.go -pkg mock . CantabularClient
+//go:generate moq -out mock/dataset-api-client.go -pkg mock . DatasetAPIClient
 
 // HTTPServer defines the required methods from the HTTP server
 type HTTPServer interface {
@@ -22,4 +24,12 @@ type HealthChecker interface {
 	Start(ctx context.Context)
 	Stop()
 	AddCheck(name string, checker healthcheck.Checker) (err error)
+}
+
+type CantabularClient interface {
+	Checker(context.Context, *healthcheck.CheckState) error
+}
+
+type DatasetAPIClient interface {
+	Checker(context.Context, *healthcheck.CheckState) error
 }
