@@ -71,6 +71,11 @@ func scanEvent(scanner *bufio.Scanner) *event.CategoryDimensionImport {
 	scanner.Scan()
 	e.JobID = scanner.Text()
 
+	fmt.Println("Please type the Cantabular Blob")
+	fmt.Printf("$ ")
+	scanner.Scan()
+	e.CantabularBlob = scanner.Text()
+
 	fmt.Println("Please type the Dimension ID")
 	fmt.Printf("$ ")
 	scanner.Scan()

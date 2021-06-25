@@ -6,49 +6,34 @@ package mock
 import (
 	"context"
 	"github.com/ONSdigital/dp-api-clients-go/dataset"
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"sync"
 )
 
 var (
-	lockDatasetAPIClientMockChecker                sync.RWMutex
 	lockDatasetAPIClientMockPostInstanceDimensions sync.RWMutex
 )
 
-// DatasetAPIClientMock is a mock implementation of service.DatasetAPIClient.
+// DatasetAPIClientMock is a mock implementation of handler.DatasetAPIClient.
 //
 //     func TestSomethingThatUsesDatasetAPIClient(t *testing.T) {
 //
-//         // make and configure a mocked service.DatasetAPIClient
+//         // make and configure a mocked handler.DatasetAPIClient
 //         mockedDatasetAPIClient := &DatasetAPIClientMock{
-//             CheckerFunc: func(in1 context.Context, in2 *healthcheck.CheckState) error {
-// 	               panic("mock out the Checker method")
-//             },
 //             PostInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost) error {
 // 	               panic("mock out the PostInstanceDimensions method")
 //             },
 //         }
 //
-//         // use mockedDatasetAPIClient in code that requires service.DatasetAPIClient
+//         // use mockedDatasetAPIClient in code that requires handler.DatasetAPIClient
 //         // and then make assertions.
 //
 //     }
 type DatasetAPIClientMock struct {
-	// CheckerFunc mocks the Checker method.
-	CheckerFunc func(in1 context.Context, in2 *healthcheck.CheckState) error
-
 	// PostInstanceDimensionsFunc mocks the PostInstanceDimensions method.
 	PostInstanceDimensionsFunc func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Checker holds details about calls to the Checker method.
-		Checker []struct {
-			// In1 is the in1 argument value.
-			In1 context.Context
-			// In2 is the in2 argument value.
-			In2 *healthcheck.CheckState
-		}
 		// PostInstanceDimensions holds details about calls to the PostInstanceDimensions method.
 		PostInstanceDimensions []struct {
 			// Ctx is the ctx argument value.
@@ -61,41 +46,6 @@ type DatasetAPIClientMock struct {
 			Data dataset.OptionPost
 		}
 	}
-}
-
-// Checker calls CheckerFunc.
-func (mock *DatasetAPIClientMock) Checker(in1 context.Context, in2 *healthcheck.CheckState) error {
-	if mock.CheckerFunc == nil {
-		panic("DatasetAPIClientMock.CheckerFunc: method is nil but DatasetAPIClient.Checker was just called")
-	}
-	callInfo := struct {
-		In1 context.Context
-		In2 *healthcheck.CheckState
-	}{
-		In1: in1,
-		In2: in2,
-	}
-	lockDatasetAPIClientMockChecker.Lock()
-	mock.calls.Checker = append(mock.calls.Checker, callInfo)
-	lockDatasetAPIClientMockChecker.Unlock()
-	return mock.CheckerFunc(in1, in2)
-}
-
-// CheckerCalls gets all the calls that were made to Checker.
-// Check the length with:
-//     len(mockedDatasetAPIClient.CheckerCalls())
-func (mock *DatasetAPIClientMock) CheckerCalls() []struct {
-	In1 context.Context
-	In2 *healthcheck.CheckState
-} {
-	var calls []struct {
-		In1 context.Context
-		In2 *healthcheck.CheckState
-	}
-	lockDatasetAPIClientMockChecker.RLock()
-	calls = mock.calls.Checker
-	lockDatasetAPIClientMockChecker.RUnlock()
-	return calls
 }
 
 // PostInstanceDimensions calls PostInstanceDimensionsFunc.

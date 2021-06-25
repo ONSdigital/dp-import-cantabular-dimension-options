@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler"
 )
 
 //go:generate moq -out mock/server.go -pkg mock . HTTPServer
@@ -26,10 +27,14 @@ type HealthChecker interface {
 	AddCheck(name string, checker healthcheck.Checker) (err error)
 }
 
+// CantabularClient wraps the CantabularClient handler interface, adding the Checker method
 type CantabularClient interface {
+	handler.CantabularClient
 	Checker(context.Context, *healthcheck.CheckState) error
 }
 
+// DatasetAPIClient wraps the DatasetAPIClient handler interface, adding the Checker method
 type DatasetAPIClient interface {
+	handler.DatasetAPIClient
 	Checker(context.Context, *healthcheck.CheckState) error
 }
