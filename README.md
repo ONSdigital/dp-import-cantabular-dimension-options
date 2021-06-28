@@ -17,17 +17,18 @@ An example event can be created using the helper script, `make produce`.
 
 ### Configuration
 
-| Environment variable         | Default                           | Description
-| ---------------------------- | --------------------------------- | -----------
-| BIND_ADDR                    | localhost:26200                    | The host and port to bind to
-| GRACEFUL_SHUTDOWN_TIMEOUT    | 5s                                | The graceful shutdown timeout in seconds (`time.Duration` format)
-| HEALTHCHECK_INTERVAL         | 30s                               | Time between self-healthchecks (`time.Duration` format)
-| HEALTHCHECK_CRITICAL_TIMEOUT | 90s                               | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format)
-| KAFKA_ADDR                   | "localhost:9092"                  | The address of Kafka (accepts list)
-| KAFKA_OFFSET_OLDEST          | true                              | Start processing Kafka messages in order from the oldest in the queue
-| KAFKA_NUM_WORKERS            | 1                                 | The maximum number of parallel kafka consumers
-| HELLO_CALLED_GROUP           | dp-import-cantabular-dimension-options              | The consumer group this application to consume ImageUploaded messages
-| HELLO_CALLED_TOPIC           | hello-called                      | The name of the topic to consume messages from
+| Environment variable            | Default                                      | Description
+| ------------------------------- | -------------------------------------------- | -----------
+| BIND_ADDR                       | localhost:26200                              | The host and port to bind to
+| GRACEFUL_SHUTDOWN_TIMEOUT       | 5s                                           | The graceful shutdown timeout in seconds (`time.Duration` format)
+| HEALTHCHECK_INTERVAL            | 30s                                          | Time between self-healthchecks (`time.Duration` format)
+| HEALTHCHECK_CRITICAL_TIMEOUT    | 90s                                          | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format)
+| KAFKA_ADDR                      | "localhost:9092"                             | The address of Kafka (accepts list)
+| KAFKA_OFFSET_OLDEST             | true                                         | Start processing Kafka messages in order from the oldest in the queue
+| KAFKA_NUM_WORKERS               | 1                                            | The maximum number of parallel kafka consumers
+| CATEGORY_DIMENSION_IMPORT_GROUP | dp-import-cantabular-dimension-options       | The consumer group this application to consume ImageUploaded messages
+| CATEGORY_DIMENSION_IMPORT_TOPIC | cantabular-dataset-category-dimension-import | The name of the topic to consume messages from
+| INSTANCE_COMPLETE_TOPIC         | cantabular-dataset-instance-complete         | The name of the topic to produce
 
 ### Healthcheck
 

@@ -5,9 +5,12 @@ package mock
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"sync"
+)
+
+var (
+	lockHandlerMockHandle sync.RWMutex
 )
 
 // Ensure, that HandlerMock does implement event.Handler.
@@ -16,22 +19,22 @@ var _ event.Handler = &HandlerMock{}
 
 // HandlerMock is a mock implementation of event.Handler.
 //
-// 	func TestSomethingThatUsesHandler(t *testing.T) {
+//     func TestSomethingThatUsesHandler(t *testing.T) {
 //
-// 		// make and configure a mocked event.Handler
-// 		mockedHandler := &HandlerMock{
-// 			HandleFunc: func(ctx context.Context, cfg *config.Config, helloCalled *event.HelloCalled) error {
-// 				panic("mock out the Handle method")
-// 			},
-// 		}
+//         // make and configure a mocked event.Handler
+//         mockedHandler := &HandlerMock{
+//             HandleFunc: func(ctx context.Context, categoryDimensionImport *event.CategoryDimensionImport) error {
+// 	               panic("mock out the Handle method")
+//             },
+//         }
 //
-// 		// use mockedHandler in code that requires event.Handler
-// 		// and then make assertions.
+//         // use mockedHandler in code that requires event.Handler
+//         // and then make assertions.
 //
-// 	}
+//     }
 type HandlerMock struct {
 	// HandleFunc mocks the Handle method.
-	HandleFunc func(ctx context.Context, cfg *config.Config, helloCalled *event.HelloCalled) error
+	HandleFunc func(ctx context.Context, categoryDimensionImport *event.CategoryDimensionImport) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -39,50 +42,43 @@ type HandlerMock struct {
 		Handle []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Cfg is the cfg argument value.
-			Cfg *config.Config
-			// HelloCalled is the helloCalled argument value.
-			HelloCalled *event.HelloCalled
+			// CategoryDimensionImport is the categoryDimensionImport argument value.
+			CategoryDimensionImport *event.CategoryDimensionImport
 		}
 	}
-	lockHandle sync.RWMutex
 }
 
 // Handle calls HandleFunc.
-func (mock *HandlerMock) Handle(ctx context.Context, cfg *config.Config, helloCalled *event.HelloCalled) error {
+func (mock *HandlerMock) Handle(ctx context.Context, categoryDimensionImport *event.CategoryDimensionImport) error {
 	if mock.HandleFunc == nil {
 		panic("HandlerMock.HandleFunc: method is nil but Handler.Handle was just called")
 	}
 	callInfo := struct {
-		Ctx         context.Context
-		Cfg         *config.Config
-		HelloCalled *event.HelloCalled
+		Ctx                     context.Context
+		CategoryDimensionImport *event.CategoryDimensionImport
 	}{
-		Ctx:         ctx,
-		Cfg:         cfg,
-		HelloCalled: helloCalled,
+		Ctx:                     ctx,
+		CategoryDimensionImport: categoryDimensionImport,
 	}
-	mock.lockHandle.Lock()
+	lockHandlerMockHandle.Lock()
 	mock.calls.Handle = append(mock.calls.Handle, callInfo)
-	mock.lockHandle.Unlock()
-	return mock.HandleFunc(ctx, cfg, helloCalled)
+	lockHandlerMockHandle.Unlock()
+	return mock.HandleFunc(ctx, categoryDimensionImport)
 }
 
 // HandleCalls gets all the calls that were made to Handle.
 // Check the length with:
 //     len(mockedHandler.HandleCalls())
 func (mock *HandlerMock) HandleCalls() []struct {
-	Ctx         context.Context
-	Cfg         *config.Config
-	HelloCalled *event.HelloCalled
+	Ctx                     context.Context
+	CategoryDimensionImport *event.CategoryDimensionImport
 } {
 	var calls []struct {
-		Ctx         context.Context
-		Cfg         *config.Config
-		HelloCalled *event.HelloCalled
+		Ctx                     context.Context
+		CategoryDimensionImport *event.CategoryDimensionImport
 	}
-	mock.lockHandle.RLock()
+	lockHandlerMockHandle.RLock()
 	calls = mock.calls.Handle
-	mock.lockHandle.RUnlock()
+	lockHandlerMockHandle.RUnlock()
 	return calls
 }

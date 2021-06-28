@@ -3,7 +3,6 @@ package event_test
 import (
 	"context"
 	"errors"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"sync"
 	"testing"
 
@@ -19,9 +18,13 @@ var testCtx = context.Background()
 
 var errHandler = errors.New("Handler Error")
 
-var testEvent = event.HelloCalled{
-	RecipientName: "World",
+var testEvent = event.CategoryDimensionImport{
+	JobID:       "testJobID",
+	InstanceID:  "testInstanceID",
+	DimensionID: "testDimensionID",
 }
+
+var numKafkaWorkers = 1
 
 // kafkaStubConsumer mock which exposes Channels function returning empty channels
 // to be used on tests that are not supposed to receive any kafka message
@@ -31,7 +34,6 @@ var kafkaStubConsumer = &kafkatest.IConsumerGroupMock{
 	},
 }
 
-// TODO: remove or replace hello called logic with app specific
 func TestConsume(t *testing.T) {
 
 	Convey("Given kafka consumer and event handler mocks", t, func() {
@@ -43,7 +45,7 @@ func TestConsume(t *testing.T) {
 
 		handlerWg := &sync.WaitGroup{}
 		mockEventHandler := &mock.HandlerMock{
-			HandleFunc: func(ctx context.Context, config *config.Config, event *event.HelloCalled) error {
+			HandleFunc: func(ctx context.Context, event *event.CategoryDimensionImport) error {
 				defer handlerWg.Done()
 				return nil
 			},
@@ -57,12 +59,12 @@ func TestConsume(t *testing.T) {
 			Convey("When consume message is called", func() {
 
 				handlerWg.Add(1)
-				event.Consume(testCtx, mockConsumer, mockEventHandler, &config.Config{KafkaNumWorkers: 1})
+				event.Consume(testCtx, mockConsumer, mockEventHandler, numKafkaWorkers)
 				handlerWg.Wait()
 
 				Convey("An event is sent to the mockEventHandler ", func() {
 					So(len(mockEventHandler.HandleCalls()), ShouldEqual, 1)
-					So(*mockEventHandler.HandleCalls()[0].HelloCalled, ShouldResemble, testEvent)
+					So(*mockEventHandler.HandleCalls()[0].CategoryDimensionImport, ShouldResemble, testEvent)
 				})
 
 				Convey("The message is committed and the consumer is released", func() {
@@ -83,12 +85,12 @@ func TestConsume(t *testing.T) {
 			Convey("When consume messages is called", func() {
 
 				handlerWg.Add(1)
-				event.Consume(testCtx, mockConsumer, mockEventHandler, &config.Config{KafkaNumWorkers: 1})
+				event.Consume(testCtx, mockConsumer, mockEventHandler, numKafkaWorkers)
 				handlerWg.Wait()
 
 				Convey("Only the valid event is sent to the mockEventHandler ", func() {
 					So(len(mockEventHandler.HandleCalls()), ShouldEqual, 1)
-					So(*mockEventHandler.HandleCalls()[0].HelloCalled, ShouldResemble, testEvent)
+					So(*mockEventHandler.HandleCalls()[0].CategoryDimensionImport, ShouldResemble, testEvent)
 				})
 
 				Convey("Only the valid message is committed, but the consumer is released for both messages", func() {
@@ -103,7 +105,7 @@ func TestConsume(t *testing.T) {
 		})
 
 		Convey("With a failing handler and a kafka message with the valid schema being sent to the Upstream channel", func() {
-			mockEventHandler.HandleFunc = func(ctx context.Context, config *config.Config, event *event.HelloCalled) error {
+			mockEventHandler.HandleFunc = func(ctx context.Context, event *event.CategoryDimensionImport) error {
 				defer handlerWg.Done()
 				return errHandler
 			}
@@ -113,12 +115,12 @@ func TestConsume(t *testing.T) {
 			Convey("When consume message is called", func() {
 
 				handlerWg.Add(1)
-				event.Consume(testCtx, mockConsumer, mockEventHandler, &config.Config{KafkaNumWorkers: 1})
+				event.Consume(testCtx, mockConsumer, mockEventHandler, numKafkaWorkers)
 				handlerWg.Wait()
 
 				Convey("An event is sent to the mockEventHandler ", func() {
 					So(len(mockEventHandler.HandleCalls()), ShouldEqual, 1)
-					So(*mockEventHandler.HandleCalls()[0].HelloCalled, ShouldResemble, testEvent)
+					So(*mockEventHandler.HandleCalls()[0].CategoryDimensionImport, ShouldResemble, testEvent)
 				})
 
 				Convey("The message is committed and the consumer is released", func() {
@@ -132,8 +134,8 @@ func TestConsume(t *testing.T) {
 }
 
 // marshal helper method to marshal a event into a []byte
-func marshal(event event.HelloCalled) []byte {
-	bytes, err := schema.HelloCalledEvent.Marshal(event)
+func marshal(event event.CategoryDimensionImport) []byte {
+	bytes, err := schema.CategoryDimensionImport.Marshal(event)
 	So(err, ShouldBeNil)
 	return bytes
 }
