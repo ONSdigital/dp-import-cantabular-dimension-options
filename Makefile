@@ -22,6 +22,10 @@ debug:
 	go build -tags 'debug' $(LDFLAGS) -o $(BINPATH)/dp-import-cantabular-dimension-options
 	HUMAN_LOG=1 DEBUG=1 $(BINPATH)/dp-import-cantabular-dimension-options
 
+.PHONY: lint
+lint:
+	exit
+	
 .PHONY: test
 test:
 	go test -race -cover ./...

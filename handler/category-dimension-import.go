@@ -65,5 +65,10 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		}
 	}
 
+	log.Info(ctx, "successfully posted all dimension options to dataset api", log.Data{
+		"codes":  resp.Codebook[0].Codes,
+		"labels": resp.Codebook[0].Labels,
+	})
+
 	return nil
 }
