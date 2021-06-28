@@ -9,7 +9,6 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/dataset"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
@@ -18,7 +17,6 @@ type CategoryDimensionImport struct {
 	cfg      config.Config
 	ctblr    CantabularClient
 	datasets DatasetAPIClient
-	producer kafka.IProducer
 }
 
 // NewCategoryDimensionImport creates a new CategoryDimensionImport with the provided config and Cantabular client
@@ -38,6 +36,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	}
 	log.Info(ctx, "event handler called", logData)
 
+	// obtain the possible values for the provided dimension and blob
 	resp, err := h.ctblr.GetCodebook(ctx, cantabular.GetCodebookRequest{
 		DatasetName: e.CantabularBlob,
 		Categories:  true,
@@ -65,11 +64,6 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 			return fmt.Errorf("error posting instance option: %w", err)
 		}
 	}
-
-	// TODO call import API to update the state (or should this be done by the import tracker?)
-
-	// TODO figure out how to know if all dimensions have been processed and send `import complete` kafka message
-	// (or should this be done by the import tracker?)
 
 	return nil
 }
