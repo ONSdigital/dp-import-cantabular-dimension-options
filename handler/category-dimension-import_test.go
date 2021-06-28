@@ -11,6 +11,7 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler/mock"
+	"github.com/ONSdigital/log.go/v2/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -115,7 +116,7 @@ func TestHandle(t *testing.T) {
 				DimensionID:    "test-variable",
 				CantabularBlob: "test-blob",
 			})
-			So(err, ShouldResemble, errCantabular)
+			So(err, ShouldResemble, fmt.Errorf("error getting cantabular codebook: %w", errCantabular))
 		})
 	})
 
@@ -134,7 +135,15 @@ func TestHandle(t *testing.T) {
 				DimensionID:    "test-variable",
 				CantabularBlob: "test-blob",
 			})
-			So(err, ShouldResemble, errors.New("unexpected response from Cantabular server"))
+			So(err, ShouldResemble, Error{
+				err: errors.New("unexpected response from Cantabular server"),
+				logData: log.Data{
+					"response": &cantabular.GetCodebookResponse{
+						Codebook: cantabular.Codebook{},
+						Dataset:  cantabular.Dataset{},
+					},
+				},
+			})
 		})
 	})
 
