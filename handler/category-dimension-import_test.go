@@ -135,7 +135,7 @@ func TestHandle(t *testing.T) {
 				DimensionID:    "test-variable",
 				CantabularBlob: "test-blob",
 			})
-			So(err, ShouldResemble, Error{
+			So(err, ShouldResemble, &Error{
 				err: errors.New("unexpected response from Cantabular server"),
 				logData: log.Data{
 					"response": &cantabular.GetCodebookResponse{
@@ -164,7 +164,10 @@ func TestHandle(t *testing.T) {
 				DimensionID:    "test-variable",
 				CantabularBlob: "test-blob",
 			})
-			So(err, ShouldResemble, fmt.Errorf("error posting instance option: %w", errDataset))
+			So(err, ShouldResemble, &Error{
+				err:     fmt.Errorf("error posting instance option: %w", errDataset),
+				logData: log.Data{"dimension": "test-variable"},
+			})
 		})
 	})
 }

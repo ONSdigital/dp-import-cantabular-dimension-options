@@ -48,7 +48,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 	// validate that there is exactly one Codebook in the response
 	if resp == nil || resp.Codebook == nil || len(resp.Codebook) != 1 {
-		return Error{
+		return &Error{
 			err:     errors.New("unexpected response from Cantabular server"),
 			logData: log.Data{"response": resp},
 		}
@@ -66,7 +66,10 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 			Option:   variable.Codes[i],
 			Label:    variable.Labels[i],
 		}); err != nil {
-			return fmt.Errorf("error posting instance option: %w", err)
+			return &Error{
+				err:     fmt.Errorf("error posting instance option: %w", err),
+				logData: log.Data{"dimension": e.DimensionID},
+			}
 		}
 	}
 
