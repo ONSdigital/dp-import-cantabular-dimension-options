@@ -40,4 +40,7 @@ convey:
 
 .PHONY: test-component
 test-component:
+	docker-compose -f features/steps/kafka-cluster.yml up -d
 	go test -cover -coverpkg=github.com/ONSdigital/dp-import-cantabular-dimension-options/... -component
+	docker-compose -f features/steps/kafka-cluster.yml kill
+	docker-compose -f features/steps/kafka-cluster.yml rm -f

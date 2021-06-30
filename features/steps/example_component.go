@@ -3,23 +3,23 @@ package steps
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service/mock"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
-	dphttp "github.com/ONSdigital/dp-net/http"
+)
+
+var (
+	BuildTime string = "1625046891"
+	GitCommit string = "7434fe334d9f51b7239f978094ea29d10ac33b16"
+	Version   string = ""
 )
 
 type Component struct {
 	componenttest.ErrorFeature
 	KafkaConsumer kafka.IConsumerGroup
-	killChannel   chan os.Signal
 	apiFeature    *componenttest.APIFeature
 	errorChan     chan error
 	svc           *service.Service
@@ -27,26 +27,18 @@ type Component struct {
 }
 
 func NewComponent() *Component {
-
 	c := &Component{errorChan: make(chan error)}
 
-	consumer := kafkatest.NewMessageConsumer(false)
-	consumer.CheckerFunc = funcCheck
-	c.KafkaConsumer = consumer
-
+	// Read config
 	cfg, err := config.Get()
 	if err != nil {
 		return nil
 	}
-
 	c.cfg = cfg
 
-	service.GetKafkaConsumer = c.GetConsumer
-	service.GetHealthCheck = c.GetHealthCheck
-	service.GetHTTPServer = c.GetHTTPServer
-
+	// Create service and initialise it
 	c.svc = service.New()
-	err = c.svc.Init(context.Background(), cfg, "", "", "")
+	err = c.svc.Init(context.Background(), cfg, BuildTime, GitCommit, Version)
 	if err != nil {
 		panic(fmt.Errorf("unexpected service Init error in NewComponent: %w", err))
 	}
@@ -60,24 +52,4 @@ func (c *Component) Close() {
 
 func (c *Component) Reset() {
 	os.Remove(c.cfg.OutputFilePath)
-}
-
-func (c *Component) GetHealthCheck(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
-	return &mock.HealthCheckerMock{
-		AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
-		StartFunc:    func(ctx context.Context) {},
-		StopFunc:     func() {},
-	}, nil
-}
-
-func (c *Component) GetHTTPServer(bindAddr string, router http.Handler) service.HTTPServer {
-	return dphttp.NewServer(bindAddr, router)
-}
-
-func (c *Component) GetConsumer(ctx context.Context, cfg *config.Config) (kafkaConsumer kafka.IConsumerGroup, err error) {
-	return c.KafkaConsumer, nil
-}
-
-func funcCheck(ctx context.Context, state *healthcheck.CheckState) error {
-	return nil
 }
