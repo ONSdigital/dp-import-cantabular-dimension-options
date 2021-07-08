@@ -36,6 +36,9 @@ type CantabularClient interface {
 
 // DatasetAPIClient wraps the DatasetAPIClient handler interface, adding the Checker method
 type DatasetAPIClient interface {
+	GetInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string) (m dataset.Instance, err error)
 	PostInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, data dataset.OptionPost) error
+	UpdateInstanceWithNewInserts(ctx context.Context, serviceAuthToken, instanceID string, observationsInserted int32) error
+	PutInstanceState(ctx context.Context, serviceAuthToken, instanceID string, state dataset.State) error
 	Checker(context.Context, *healthcheck.CheckState) error
 }

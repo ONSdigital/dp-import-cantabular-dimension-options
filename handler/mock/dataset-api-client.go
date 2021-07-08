@@ -10,7 +10,10 @@ import (
 )
 
 var (
-	lockDatasetAPIClientMockPostInstanceDimensions sync.RWMutex
+	lockDatasetAPIClientMockGetInstance                  sync.RWMutex
+	lockDatasetAPIClientMockPostInstanceDimensions       sync.RWMutex
+	lockDatasetAPIClientMockPutInstanceState             sync.RWMutex
+	lockDatasetAPIClientMockUpdateInstanceWithNewInserts sync.RWMutex
 )
 
 // DatasetAPIClientMock is a mock implementation of handler.DatasetAPIClient.
@@ -19,8 +22,17 @@ var (
 //
 //         // make and configure a mocked handler.DatasetAPIClient
 //         mockedDatasetAPIClient := &DatasetAPIClientMock{
+//             GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string) (dataset.Instance, error) {
+// 	               panic("mock out the GetInstance method")
+//             },
 //             PostInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost) error {
 // 	               panic("mock out the PostInstanceDimensions method")
+//             },
+//             PutInstanceStateFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State) error {
+// 	               panic("mock out the PutInstanceState method")
+//             },
+//             UpdateInstanceWithNewInsertsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, observationsInserted int32) error {
+// 	               panic("mock out the UpdateInstanceWithNewInserts method")
 //             },
 //         }
 //
@@ -29,11 +41,33 @@ var (
 //
 //     }
 type DatasetAPIClientMock struct {
+	// GetInstanceFunc mocks the GetInstance method.
+	GetInstanceFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string) (dataset.Instance, error)
+
 	// PostInstanceDimensionsFunc mocks the PostInstanceDimensions method.
 	PostInstanceDimensionsFunc func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost) error
 
+	// PutInstanceStateFunc mocks the PutInstanceState method.
+	PutInstanceStateFunc func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State) error
+
+	// UpdateInstanceWithNewInsertsFunc mocks the UpdateInstanceWithNewInserts method.
+	UpdateInstanceWithNewInsertsFunc func(ctx context.Context, serviceAuthToken string, instanceID string, observationsInserted int32) error
+
 	// calls tracks calls to the methods.
 	calls struct {
+		// GetInstance holds details about calls to the GetInstance method.
+		GetInstance []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// UserAuthToken is the userAuthToken argument value.
+			UserAuthToken string
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// CollectionID is the collectionID argument value.
+			CollectionID string
+			// InstanceID is the instanceID argument value.
+			InstanceID string
+		}
 		// PostInstanceDimensions holds details about calls to the PostInstanceDimensions method.
 		PostInstanceDimensions []struct {
 			// Ctx is the ctx argument value.
@@ -45,7 +79,76 @@ type DatasetAPIClientMock struct {
 			// Data is the data argument value.
 			Data dataset.OptionPost
 		}
+		// PutInstanceState holds details about calls to the PutInstanceState method.
+		PutInstanceState []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// InstanceID is the instanceID argument value.
+			InstanceID string
+			// State is the state argument value.
+			State dataset.State
+		}
+		// UpdateInstanceWithNewInserts holds details about calls to the UpdateInstanceWithNewInserts method.
+		UpdateInstanceWithNewInserts []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// InstanceID is the instanceID argument value.
+			InstanceID string
+			// ObservationsInserted is the observationsInserted argument value.
+			ObservationsInserted int32
+		}
 	}
+}
+
+// GetInstance calls GetInstanceFunc.
+func (mock *DatasetAPIClientMock) GetInstance(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string) (dataset.Instance, error) {
+	if mock.GetInstanceFunc == nil {
+		panic("DatasetAPIClientMock.GetInstanceFunc: method is nil but DatasetAPIClient.GetInstance was just called")
+	}
+	callInfo := struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		InstanceID       string
+	}{
+		Ctx:              ctx,
+		UserAuthToken:    userAuthToken,
+		ServiceAuthToken: serviceAuthToken,
+		CollectionID:     collectionID,
+		InstanceID:       instanceID,
+	}
+	lockDatasetAPIClientMockGetInstance.Lock()
+	mock.calls.GetInstance = append(mock.calls.GetInstance, callInfo)
+	lockDatasetAPIClientMockGetInstance.Unlock()
+	return mock.GetInstanceFunc(ctx, userAuthToken, serviceAuthToken, collectionID, instanceID)
+}
+
+// GetInstanceCalls gets all the calls that were made to GetInstance.
+// Check the length with:
+//     len(mockedDatasetAPIClient.GetInstanceCalls())
+func (mock *DatasetAPIClientMock) GetInstanceCalls() []struct {
+	Ctx              context.Context
+	UserAuthToken    string
+	ServiceAuthToken string
+	CollectionID     string
+	InstanceID       string
+} {
+	var calls []struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		InstanceID       string
+	}
+	lockDatasetAPIClientMockGetInstance.RLock()
+	calls = mock.calls.GetInstance
+	lockDatasetAPIClientMockGetInstance.RUnlock()
+	return calls
 }
 
 // PostInstanceDimensions calls PostInstanceDimensionsFunc.
@@ -88,5 +191,91 @@ func (mock *DatasetAPIClientMock) PostInstanceDimensionsCalls() []struct {
 	lockDatasetAPIClientMockPostInstanceDimensions.RLock()
 	calls = mock.calls.PostInstanceDimensions
 	lockDatasetAPIClientMockPostInstanceDimensions.RUnlock()
+	return calls
+}
+
+// PutInstanceState calls PutInstanceStateFunc.
+func (mock *DatasetAPIClientMock) PutInstanceState(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State) error {
+	if mock.PutInstanceStateFunc == nil {
+		panic("DatasetAPIClientMock.PutInstanceStateFunc: method is nil but DatasetAPIClient.PutInstanceState was just called")
+	}
+	callInfo := struct {
+		Ctx              context.Context
+		ServiceAuthToken string
+		InstanceID       string
+		State            dataset.State
+	}{
+		Ctx:              ctx,
+		ServiceAuthToken: serviceAuthToken,
+		InstanceID:       instanceID,
+		State:            state,
+	}
+	lockDatasetAPIClientMockPutInstanceState.Lock()
+	mock.calls.PutInstanceState = append(mock.calls.PutInstanceState, callInfo)
+	lockDatasetAPIClientMockPutInstanceState.Unlock()
+	return mock.PutInstanceStateFunc(ctx, serviceAuthToken, instanceID, state)
+}
+
+// PutInstanceStateCalls gets all the calls that were made to PutInstanceState.
+// Check the length with:
+//     len(mockedDatasetAPIClient.PutInstanceStateCalls())
+func (mock *DatasetAPIClientMock) PutInstanceStateCalls() []struct {
+	Ctx              context.Context
+	ServiceAuthToken string
+	InstanceID       string
+	State            dataset.State
+} {
+	var calls []struct {
+		Ctx              context.Context
+		ServiceAuthToken string
+		InstanceID       string
+		State            dataset.State
+	}
+	lockDatasetAPIClientMockPutInstanceState.RLock()
+	calls = mock.calls.PutInstanceState
+	lockDatasetAPIClientMockPutInstanceState.RUnlock()
+	return calls
+}
+
+// UpdateInstanceWithNewInserts calls UpdateInstanceWithNewInsertsFunc.
+func (mock *DatasetAPIClientMock) UpdateInstanceWithNewInserts(ctx context.Context, serviceAuthToken string, instanceID string, observationsInserted int32) error {
+	if mock.UpdateInstanceWithNewInsertsFunc == nil {
+		panic("DatasetAPIClientMock.UpdateInstanceWithNewInsertsFunc: method is nil but DatasetAPIClient.UpdateInstanceWithNewInserts was just called")
+	}
+	callInfo := struct {
+		Ctx                  context.Context
+		ServiceAuthToken     string
+		InstanceID           string
+		ObservationsInserted int32
+	}{
+		Ctx:                  ctx,
+		ServiceAuthToken:     serviceAuthToken,
+		InstanceID:           instanceID,
+		ObservationsInserted: observationsInserted,
+	}
+	lockDatasetAPIClientMockUpdateInstanceWithNewInserts.Lock()
+	mock.calls.UpdateInstanceWithNewInserts = append(mock.calls.UpdateInstanceWithNewInserts, callInfo)
+	lockDatasetAPIClientMockUpdateInstanceWithNewInserts.Unlock()
+	return mock.UpdateInstanceWithNewInsertsFunc(ctx, serviceAuthToken, instanceID, observationsInserted)
+}
+
+// UpdateInstanceWithNewInsertsCalls gets all the calls that were made to UpdateInstanceWithNewInserts.
+// Check the length with:
+//     len(mockedDatasetAPIClient.UpdateInstanceWithNewInsertsCalls())
+func (mock *DatasetAPIClientMock) UpdateInstanceWithNewInsertsCalls() []struct {
+	Ctx                  context.Context
+	ServiceAuthToken     string
+	InstanceID           string
+	ObservationsInserted int32
+} {
+	var calls []struct {
+		Ctx                  context.Context
+		ServiceAuthToken     string
+		InstanceID           string
+		ObservationsInserted int32
+	}
+	lockDatasetAPIClientMockUpdateInstanceWithNewInserts.RLock()
+	calls = mock.calls.UpdateInstanceWithNewInserts
+	lockDatasetAPIClientMockUpdateInstanceWithNewInserts.RUnlock()
 	return calls
 }

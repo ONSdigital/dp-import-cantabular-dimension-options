@@ -15,5 +15,7 @@ type CantabularClient interface {
 }
 
 type DatasetAPIClient interface {
+	GetInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string) (m dataset.Instance, err error)
 	PostInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, data dataset.OptionPost) error
+	PutInstanceState(ctx context.Context, serviceAuthToken, instanceID string, state dataset.State) error
 }

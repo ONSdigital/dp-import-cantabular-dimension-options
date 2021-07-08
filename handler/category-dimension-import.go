@@ -36,6 +36,21 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	}
 	log.Info(ctx, "event handler called", logData)
 
+	// get instance state
+	i, err := h.datasets.GetInstance(ctx, "", h.cfg.ServiceAuthToken, "", e.InstanceID)
+	if err != nil {
+		// TODO we might want to retry this, once retries are implemented
+		return h.instanceFailed(ctx, fmt.Errorf("error getting instance from dataset-api: %w", err), e)
+	}
+
+	// validate instance state
+	if i.State != dataset.StateSubmitted.String() {
+		return &Error{
+			err:     errors.New("instance is in wrong state, no dimensions options will be imported"),
+			logData: log.Data{"event": e, "instance_state": i.State},
+		}
+	}
+
 	// obtain the possible values for the provided dimension and blob
 	resp, err := h.ctblr.GetCodebook(ctx, cantabular.GetCodebookRequest{
 		DatasetName: e.CantabularBlob,
@@ -43,21 +58,19 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		Variables:   []string{e.DimensionID},
 	})
 	if err != nil {
-		return fmt.Errorf("error getting cantabular codebook: %w", err)
+		// TODO we might want to retry this, once retries are implemented
+		return h.instanceFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
 	}
 
 	// validate that there is exactly one Codebook in the response
 	if resp == nil || resp.Codebook == nil || len(resp.Codebook) != 1 {
-		return &Error{
-			err:     errors.New("unexpected response from Cantabular server"),
-			logData: log.Data{"response": resp},
-		}
+		return h.instanceFailed(ctx, errors.New("unexpected response from Cantabular server"), e)
 	}
 
 	variable := resp.Codebook[0]
 
 	// Post a new dimension option for each item
-	// TODO we might consider doing some posts concurrently if we observe bad performance
+	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimeinsion options), similar to what we did in Filter API.
 	for i := 0; i < variable.Len; i++ {
 		if err := h.datasets.PostInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.OptionPost{
 			Name:     variable.Name,
@@ -66,17 +79,39 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 			Option:   variable.Codes[i],
 			Label:    variable.Labels[i],
 		}); err != nil {
-			return &Error{
-				err:     fmt.Errorf("error posting instance option: %w", err),
-				logData: log.Data{"dimension": e.DimensionID},
-			}
+			// TODO we might want to retry this, once retries are implemented
+			return h.instanceFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
 		}
 	}
 
+	// Count number of options for each dimension, if all dimensions have more than 0, atomically update the state to completed
+
+	// check if this was the last dimension that was updated, according to the number of observations - then update instance and import task state to completed
+	// TODO: we can have concurrency issues with this if multiple instances of this services handle different dimensions concurrently - we need an ETag - IfMatch mechanism in dataset API
+	// it would be good enough if updateInstanceWithNewInserts returns the current value
+	if err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateCompleted); err != nil {
+		return h.instanceFailed(ctx, fmt.Errorf("error updating instance to completed state: %w", err), e)
+	}
+
 	log.Info(ctx, "successfully posted all dimension options to dataset api", log.Data{
-		"codes":  variable.Codes,
-		"labels": variable.Labels,
+		"codes":     variable.Codes,
+		"labels":    variable.Labels,
+		"dimension": e.DimensionID,
 	})
 
 	return nil
+}
+
+// instanceFailed updates the instance state to 'failed' and returns an Error wrapping the original error and any error during the state update
+func (h *CategoryDimensionImport) instanceFailed(ctx context.Context, err error, e *event.CategoryDimensionImport) error {
+	if err1 := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed); err1 != nil {
+		return &Error{
+			err:     fmt.Errorf("error updating instance state during error handling: %w", err1),
+			logData: log.Data{"event": e, "original_error": err},
+		}
+	}
+	return &Error{
+		err:     err,
+		logData: log.Data{"event": e},
+	}
 }
