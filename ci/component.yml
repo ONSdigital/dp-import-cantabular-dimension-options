@@ -5,11 +5,15 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: docker/compose
+    repository: taylorsilva/dcind
     tag: latest
+    privileged: true
 
 inputs:
   - name: dp-import-cantabular-dimension-options
 
 run:
   path: dp-import-cantabular-dimension-options/ci/scripts/component.sh
+
+caches:
+  - path: /var/run/docker.sock
