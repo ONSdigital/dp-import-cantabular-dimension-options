@@ -22,10 +22,14 @@ debug:
 	go build -tags 'debug' $(LDFLAGS) -o $(BINPATH)/dp-import-cantabular-dimension-options
 	HUMAN_LOG=1 DEBUG=1 $(BINPATH)/dp-import-cantabular-dimension-options
 
+.PHONY: debug-run
+debug-run:
+	HUMAN_LOG=1 DEBUG=1 go run -tags 'debug' $(LDFLAGS) main.go
+
 .PHONY: lint
 lint:
 	exit
-	
+
 .PHONY: test
 test:
 	go test -race -cover ./...
@@ -40,7 +44,4 @@ convey:
 
 .PHONY: test-component
 test-component:
-	docker compose -f features/steps/kafka-cluster.yml up -d
-	go test -cover -coverpkg=github.com/ONSdigital/dp-import-cantabular-dimension-options/... -component
-	docker compose -f features/steps/kafka-cluster.yml kill
-	docker compose -f features/steps/kafka-cluster.yml rm -f
+	cd features/compose; docker compose up --abort-on-container-exit
