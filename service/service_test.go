@@ -60,6 +60,20 @@ func TestInit(t *testing.T) {
 			return serverMock
 		}
 
+		cantabularMock := &serviceMock.CantabularClientMock{
+			CheckerFunc: func(context.Context, *healthcheck.CheckState) error {
+				return nil
+			},
+		}
+		GetCantabularClient = func(cfg *config.Config) CantabularClient { return cantabularMock }
+
+		datasetAPIMock := &serviceMock.DatasetAPIClientMock{
+			CheckerFunc: func(context.Context, *healthcheck.CheckState) error {
+				return nil
+			},
+		}
+		GetDatasetAPIClient = func(cfg *config.Config) DatasetAPIClient { return datasetAPIMock }
+
 		svc := &Service{}
 
 		Convey("Given that initialising Kafka consumer returns an error", func() {
@@ -136,9 +150,11 @@ func TestInit(t *testing.T) {
 				So(svc.server, ShouldResemble, serverMock)
 
 				Convey("And all checks are registered", func() {
-					So(hcMock.AddCheckCalls(), ShouldHaveLength, 2)
+					So(hcMock.AddCheckCalls(), ShouldHaveLength, 4)
 					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka consumer")
 					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka producer")
+					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Cantabular")
+					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Dataset API")
 				})
 			})
 		})
@@ -228,7 +244,7 @@ func TestClose(t *testing.T) {
 		producerMock := &kafkatest.IProducerMock{
 			CloseFunc: func(ctx context.Context) error {
 				if consumerListening {
-					return fmt.Errorf("Kafka producer closed while consumer is still listening")
+					return fmt.Errorf("kafka producer closed while consumer is still listening")
 				}
 				return nil
 			},
@@ -243,7 +259,7 @@ func TestClose(t *testing.T) {
 		serverMock := &serviceMock.HTTPServerMock{
 			ShutdownFunc: func(ctx context.Context) error {
 				if !hcStopped {
-					return fmt.Errorf("Server stopped before healthcheck")
+					return fmt.Errorf("server stopped before healthcheck")
 				}
 				return nil
 			},

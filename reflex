@@ -1,0 +1,5 @@
+# This file is used by the corresponding docker-compose to use the latest code in the service docker container
+# Watch all files ending in .go, excluding files in `.go` or `cmd` directory
+# or files ending in `_test.go` & run `make debug-run` when any matching file
+# is changed
+-s -r \.go$ -R ^\.go/ -R ^cmd/ -R _test\.go$ make debug-run

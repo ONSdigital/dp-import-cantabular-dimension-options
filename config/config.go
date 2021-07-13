@@ -21,6 +21,9 @@ type Config struct {
 	CategoryDimensionImportTopic string        `envconfig:"CATEGORY_DIMENSION_IMPORT_TOPIC"`
 	InstanceCompleteTopic        string        `envconfig:"INSTANCE_COMPLETE_TOPIC"`
 	OutputFilePath               string        `envconfig:"OUTPUT_FILE_PATH"` // TODO remove this when the handle logic is implemented
+	DatasetAPIURL                string        `envconfig:"DATASET_API_URL"`
+	CantabularURL                string        `envconfig:"CANTABULAR_URL"`
+	ServiceAuthToken             string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 }
 
 var cfg *Config
@@ -33,7 +36,7 @@ func Get() (*Config, error) {
 	}
 
 	cfg = &Config{
-		BindAddr:                     "localhost:26200",
+		BindAddr:                     ":26200",
 		GracefulShutdownTimeout:      5 * time.Second,
 		HealthCheckInterval:          30 * time.Second,
 		HealthCheckCriticalTimeout:   90 * time.Second,
@@ -46,6 +49,9 @@ func Get() (*Config, error) {
 		CategoryDimensionImportTopic: "cantabular-dataset-category-dimension-import",
 		InstanceCompleteTopic:        "cantabular-dataset-instance-complete",
 		OutputFilePath:               "/tmp/helloworld.txt", // TODO remove this when the handle logic is implemented
+		DatasetAPIURL:                "http://localhost:22000",
+		CantabularURL:                "http://localhost:8491",
+		ServiceAuthToken:             "",
 	}
 
 	return cfg, envconfig.Process("", cfg)

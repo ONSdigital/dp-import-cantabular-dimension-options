@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ONSdigital/dp-api-clients-go/cantabular"
+	"github.com/ONSdigital/dp-api-clients-go/dataset"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
@@ -19,11 +21,13 @@ import (
 
 // Service contains all the configs, server and clients to run the event handler service
 type Service struct {
-	cfg         *config.Config
-	server      HTTPServer
-	healthCheck HealthChecker
-	consumer    kafka.IConsumerGroup
-	producer    kafka.IProducer
+	cfg              *config.Config
+	server           HTTPServer
+	healthCheck      HealthChecker
+	consumer         kafka.IConsumerGroup
+	producer         kafka.IProducer
+	cantabularClient CantabularClient
+	datasetAPIClient DatasetAPIClient
 }
 
 // GetKafkaConsumer returns a Kafka consumer with the provided config
@@ -77,6 +81,19 @@ var GetHealthCheck = func(cfg *config.Config, buildTime, gitCommit, version stri
 	return &hc, nil
 }
 
+var GetCantabularClient = func(cfg *config.Config) CantabularClient {
+	return cantabular.NewClient(
+		dphttp.NewClient(),
+		cantabular.Config{
+			Host: cfg.CantabularURL,
+		},
+	)
+}
+
+var GetDatasetAPIClient = func(cfg *config.Config) DatasetAPIClient {
+	return dataset.NewAPIClient(cfg.DatasetAPIURL)
+}
+
 // New creates a new empty service
 func New() *Service {
 	return &Service{}
@@ -102,6 +119,10 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Config, buildTime, git
 	if err != nil {
 		return fmt.Errorf("failed to initialise kafka producer: %w", err)
 	}
+
+	// Get API clients
+	svc.cantabularClient = GetCantabularClient(cfg)
+	svc.datasetAPIClient = GetDatasetAPIClient(cfg)
 
 	// Get HealthCheck
 	if svc.healthCheck, err = GetHealthCheck(cfg, buildTime, gitCommit, version); err != nil {
@@ -134,6 +155,8 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 		svc.consumer,
 		handler.NewCategoryDimensionImport(
 			*svc.cfg,
+			svc.cantabularClient,
+			svc.datasetAPIClient,
 		),
 		svc.cfg.KafkaNumWorkers,
 	)
@@ -231,6 +254,14 @@ func (svc *Service) registerCheckers() error {
 
 	if err := hc.AddCheck("Kafka producer", svc.producer.Checker); err != nil {
 		return fmt.Errorf("error adding check for Kafka producer: %w", err)
+	}
+
+	if err := hc.AddCheck("Cantabular", svc.cantabularClient.Checker); err != nil {
+		return fmt.Errorf("error adding check for Cantabular: %w", err)
+	}
+
+	if err := hc.AddCheck("Dataset API", svc.datasetAPIClient.Checker); err != nil {
+		return fmt.Errorf("error adding check for Dataset API: %w", err)
 	}
 
 	return nil

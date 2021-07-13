@@ -21,7 +21,7 @@ func main() {
 	ctx := context.Background()
 
 	// Get Config
-	config, err := config.Get()
+	cfg, err := config.Get()
 	if err != nil {
 		log.Fatal(ctx, "error getting config", err)
 		os.Exit(1)
@@ -29,11 +29,11 @@ func main() {
 
 	// Create Kafka Producer
 	pChannels := kafka.CreateProducerChannels()
-	kafkaProducer, err := kafka.NewProducer(ctx, config.KafkaAddr, config.CategoryDimensionImportTopic, pChannels, &kafka.ProducerConfig{
-		KafkaVersion: &config.KafkaVersion,
+	kafkaProducer, err := kafka.NewProducer(ctx, cfg.KafkaAddr, cfg.CategoryDimensionImportTopic, pChannels, &kafka.ProducerConfig{
+		KafkaVersion: &cfg.KafkaVersion,
 	})
 	if err != nil {
-		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": config.CategoryDimensionImportTopic})
+		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": cfg.CategoryDimensionImportTopic})
 		os.Exit(1)
 	}
 
@@ -70,6 +70,11 @@ func scanEvent(scanner *bufio.Scanner) *event.CategoryDimensionImport {
 	fmt.Printf("$ ")
 	scanner.Scan()
 	e.JobID = scanner.Text()
+
+	fmt.Println("Please type the Cantabular Blob")
+	fmt.Printf("$ ")
+	scanner.Scan()
+	e.CantabularBlob = scanner.Text()
 
 	fmt.Println("Please type the Dimension ID")
 	fmt.Printf("$ ")
