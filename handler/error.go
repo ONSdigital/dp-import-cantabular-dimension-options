@@ -5,6 +5,13 @@ type Error struct {
 	logData map[string]interface{}
 }
 
+func NewError(err error, logData map[string]interface{}) *Error {
+	return &Error{
+		err:     err,
+		logData: logData,
+	}
+}
+
 func (e *Error) Error() string {
 	return e.err.Error()
 }

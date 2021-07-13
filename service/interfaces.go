@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/ONSdigital/dp-api-clients-go/cantabular"
-	"github.com/ONSdigital/dp-api-clients-go/dataset"
+	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
+	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 )
 
@@ -36,9 +36,9 @@ type CantabularClient interface {
 
 // DatasetAPIClient wraps the DatasetAPIClient handler interface, adding the Checker method
 type DatasetAPIClient interface {
-	GetInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string) (m dataset.Instance, err error)
-	PostInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, data dataset.OptionPost) error
-	UpdateInstanceWithNewInserts(ctx context.Context, serviceAuthToken, instanceID string, observationsInserted int32) error
-	PutInstanceState(ctx context.Context, serviceAuthToken, instanceID string, state dataset.State) error
+	GetInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID, ifMatch string) (m dataset.Instance, eTag string, err error)
+	GetInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, q *dataset.QueryParams, ifMatch string) (m dataset.Dimensions, eTag string, err error)
+	PostInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, data dataset.OptionPost, ifMatch string) (eTag string, err error)
+	PutInstanceState(ctx context.Context, serviceAuthToken, instanceID string, state dataset.State, ifMatch string) (eTag string, err error)
 	Checker(context.Context, *healthcheck.CheckState) error
 }

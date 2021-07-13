@@ -1,4 +1,4 @@
-package service
+package service_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service"
 	serviceMock "github.com/ONSdigital/dp-import-cantabular-dimension-options/service/mock"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
 	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
@@ -39,24 +40,24 @@ func TestInit(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		consumerMock := &kafkatest.IConsumerGroupMock{}
-		GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
+		service.GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
 			return consumerMock, nil
 		}
 
 		producerMock := &kafkatest.IProducerMock{}
-		GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
+		service.GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
 			return producerMock, nil
 		}
 
 		hcMock := &serviceMock.HealthCheckerMock{
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 		}
-		GetHealthCheck = func(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
+		service.GetHealthCheck = func(cfg *config.Config, buildTime, gitCommit, version string) (service.HealthChecker, error) {
 			return hcMock, nil
 		}
 
 		serverMock := &serviceMock.HTTPServerMock{}
-		GetHTTPServer = func(bindAddr string, router http.Handler) HTTPServer {
+		service.GetHTTPServer = func(bindAddr string, router http.Handler) service.HTTPServer {
 			return serverMock
 		}
 
@@ -65,26 +66,26 @@ func TestInit(t *testing.T) {
 				return nil
 			},
 		}
-		GetCantabularClient = func(cfg *config.Config) CantabularClient { return cantabularMock }
+		service.GetCantabularClient = func(cfg *config.Config) service.CantabularClient { return cantabularMock }
 
 		datasetAPIMock := &serviceMock.DatasetAPIClientMock{
 			CheckerFunc: func(context.Context, *healthcheck.CheckState) error {
 				return nil
 			},
 		}
-		GetDatasetAPIClient = func(cfg *config.Config) DatasetAPIClient { return datasetAPIMock }
+		service.GetDatasetAPIClient = func(cfg *config.Config) service.DatasetAPIClient { return datasetAPIMock }
 
-		svc := &Service{}
+		svc := &service.Service{}
 
 		Convey("Given that initialising Kafka consumer returns an error", func() {
-			GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
+			service.GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
 				return nil, errKafkaConsumer
 			}
 
 			Convey("Then service Init fails with the same error and no further initialisations are attempted", func() {
 				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(errors.Unwrap(err), ShouldResemble, errKafkaConsumer)
-				So(svc.cfg, ShouldResemble, cfg)
+				So(svc.Cfg, ShouldResemble, cfg)
 
 				Convey("And no checkers are registered ", func() {
 					So(hcMock.AddCheckCalls(), ShouldHaveLength, 0)
@@ -93,14 +94,14 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising Kafka producer returns an error", func() {
-			GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
+			service.GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
 				return nil, errKafkaProducer
 			}
 
 			Convey("Then service Init fails with the same error and no further initialisations are attempted", func() {
 				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(errors.Unwrap(err), ShouldResemble, errKafkaProducer)
-				So(svc.cfg, ShouldResemble, cfg)
+				So(svc.Cfg, ShouldResemble, cfg)
 
 				Convey("And no checkers are registered ", func() {
 					So(hcMock.AddCheckCalls(), ShouldHaveLength, 0)
@@ -109,15 +110,15 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising healthcheck returns an error", func() {
-			GetHealthCheck = func(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
+			service.GetHealthCheck = func(cfg *config.Config, buildTime, gitCommit, version string) (service.HealthChecker, error) {
 				return nil, errHealthcheck
 			}
 
 			Convey("Then service Init fails with the same error and no further initialisations are attempted", func() {
 				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(errors.Unwrap(err), ShouldResemble, errHealthcheck)
-				So(svc.cfg, ShouldResemble, cfg)
-				So(svc.consumer, ShouldResemble, consumerMock)
+				So(svc.Cfg, ShouldResemble, cfg)
+				So(svc.Consumer, ShouldResemble, consumerMock)
 
 				Convey("And no checkers are registered ", func() {
 					So(hcMock.AddCheckCalls(), ShouldHaveLength, 0)
@@ -132,8 +133,8 @@ func TestInit(t *testing.T) {
 				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(err, ShouldNotBeNil)
 				So(errors.Is(err, errAddCheck), ShouldBeTrue)
-				So(svc.cfg, ShouldResemble, cfg)
-				So(svc.consumer, ShouldResemble, consumerMock)
+				So(svc.Cfg, ShouldResemble, cfg)
+				So(svc.Consumer, ShouldResemble, consumerMock)
 
 				Convey("And other checkers don't try to register", func() {
 					So(hcMock.AddCheckCalls(), ShouldHaveLength, 1)
@@ -145,9 +146,9 @@ func TestInit(t *testing.T) {
 			Convey("Then service Init succeeds, all dependencies are initialised", func() {
 				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(err, ShouldBeNil)
-				So(svc.cfg, ShouldResemble, cfg)
-				So(svc.consumer, ShouldResemble, consumerMock)
-				So(svc.server, ShouldResemble, serverMock)
+				So(svc.Cfg, ShouldResemble, cfg)
+				So(svc.Consumer, ShouldResemble, consumerMock)
+				So(svc.Server, ShouldResemble, serverMock)
 
 				Convey("And all checks are registered", func() {
 					So(hcMock.AddCheckCalls(), ShouldHaveLength, 4)
@@ -182,12 +183,12 @@ func TestStart(t *testing.T) {
 		serverWg := &sync.WaitGroup{}
 		serverMock := &serviceMock.HTTPServerMock{}
 
-		svc := &Service{
-			cfg:         cfg,
-			server:      serverMock,
-			healthCheck: hcMock,
-			consumer:    consumerMock,
-			producer:    producerMock,
+		svc := &service.Service{
+			Cfg:         cfg,
+			Server:      serverMock,
+			HealthCheck: hcMock,
+			Consumer:    consumerMock,
+			Producer:    producerMock,
 		}
 
 		Convey("When a service with a successful HTTP server is started", func() {
@@ -265,12 +266,12 @@ func TestClose(t *testing.T) {
 			},
 		}
 
-		svc := &Service{
-			cfg:         cfg,
-			server:      serverMock,
-			healthCheck: hcMock,
-			consumer:    consumerMock,
-			producer:    producerMock,
+		svc := &service.Service{
+			Cfg:         cfg,
+			Server:      serverMock,
+			HealthCheck: hcMock,
+			Consumer:    consumerMock,
+			Producer:    producerMock,
 		}
 
 		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {

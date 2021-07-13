@@ -6,6 +6,7 @@ replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.40.0
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.0.1-beta.0.20210712083233-a87e38588f44
 	github.com/ONSdigital/dp-component-test v0.3.1
 	github.com/ONSdigital/dp-healthcheck v1.0.5
 	github.com/ONSdigital/dp-kafka/v2 v2.3.0
