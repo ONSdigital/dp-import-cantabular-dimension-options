@@ -18,6 +18,15 @@ run:
     - |
       source /docker-lib.sh
       start_docker
+
+      # Load docker images
+      docker load -i wurstmeister/zookeeper
+      docker tag "$(cat zookeeper/image-id)" "$(cat zookeeper/repository):$(cat zookeeper/tag)"
+      docker load -i wurstmeister/kafka
+      docker tag "$(cat kafka/image-id)" "$(cat kafka/repository):$(cat kafka/tag)"
+      docker images
+
+      # Run component scrip
       dp-import-cantabular-dimension-options/ci/scripts/component.sh
 
 caches:
