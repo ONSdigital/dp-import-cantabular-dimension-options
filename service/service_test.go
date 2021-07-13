@@ -244,7 +244,7 @@ func TestClose(t *testing.T) {
 		producerMock := &kafkatest.IProducerMock{
 			CloseFunc: func(ctx context.Context) error {
 				if consumerListening {
-					return fmt.Errorf("Kafka producer closed while consumer is still listening")
+					return fmt.Errorf("kafka producer closed while consumer is still listening")
 				}
 				return nil
 			},
@@ -259,7 +259,7 @@ func TestClose(t *testing.T) {
 		serverMock := &serviceMock.HTTPServerMock{
 			ShutdownFunc: func(ctx context.Context) error {
 				if !hcStopped {
-					return fmt.Errorf("Server stopped before healthcheck")
+					return fmt.Errorf("server stopped before healthcheck")
 				}
 				return nil
 			},
