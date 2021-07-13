@@ -20,5 +20,6 @@ run:
       start_docker
       dp-import-cantabular-dimension-options/ci/scripts/component.sh
 
+
 caches:
   - path: /var/run/docker.sock
