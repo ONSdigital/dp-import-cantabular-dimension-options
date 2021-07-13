@@ -18,13 +18,7 @@ run:
     - |
       source /docker-lib.sh
       start_docker
-      pushd dp-import-cantabular-dimension-options/features/compose
-        echo "hello component tests"
-        docker -v
-        docker images
-        docker-compose version
-        docker-compose up --abort-on-container-exit
-      popd
+      dp-import-cantabular-dimension-options/ci/scripts/component.sh
 
 caches:
   - path: /var/run/docker.sock
