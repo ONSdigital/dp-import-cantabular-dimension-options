@@ -5,15 +5,26 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: docker/compose
+    repository: amidos/dcind
     tag: latest
-    privileged: true
 
 inputs:
   - name: dp-import-cantabular-dimension-options
 
 run:
-  path: dp-import-cantabular-dimension-options/ci/scripts/component.sh
+  path: bash
+  args:
+    - -exc
+    - |
+      source /docker-lib.sh
+      start_docker
+      pushd dp-import-cantabular-dimension-options/features/compose
+        echo "hello component tests"
+        docker -v
+        docker images
+        docker-compose version
+        docker-compose up --abort-on-container-exit
+      popd
 
 caches:
   - path: /var/run/docker.sock
