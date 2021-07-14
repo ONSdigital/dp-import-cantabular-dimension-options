@@ -86,7 +86,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	variable := resp.Codebook[0]
 
 	// Post a new dimension option for each item. If the eTag value changes from one call to another, validate the instance state again, and abort if it is not 'submitted'
-	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimeinsion options), similar to what we did in Filter API.
+	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimension options), similar to what we did in Filter API.
 	for i := 0; i < variable.Len; i++ {
 		_, err := h.datasets.PostInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.OptionPost{
 			Name:     variable.Name,
@@ -97,7 +97,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		}, eTag)
 		if err != nil {
 			switch errPost := err.(type) {
-			case dataset.ErrInvalidDatasetAPIResponse:
+			case *dataset.ErrInvalidDatasetAPIResponse:
 				if errPost.Code() == http.StatusConflict {
 					_, eTag, err = h.getSubmittedInstance(ctx, e, headers.IfMatchAnyETag)
 					if err != nil {
@@ -105,6 +105,8 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 					}
 					i-- // retry with new eTag value, as the instance is still in a valid state
 					continue
+				} else {
+					return h.instanceFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
 				}
 			default:
 				return h.instanceFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
@@ -124,14 +126,14 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		return h.instanceFailed(ctx, fmt.Errorf("error counting instance dimensions: %w", err), e)
 	}
 
-	if dims.Count == resp.Dataset.Size {
+	if dims.TotalCount == resp.Dataset.Size {
 		// Check if this was the last dimension that was updated - then update instance to 'completed' state
 		// Set instance to complete if and only if all dimension options have been added and we were the last ones to add a dimension option (i.e. eTag did not change between updating and counting)
 		// This will guarantee that this is done exactly once, because if the instance changed, this request will fail with 409, and the other consumer that set the last value will do the update
 		_, err = h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateCompleted, eTag)
 		if err != nil {
 			switch putErr := err.(type) {
-			case dataset.ErrInvalidDatasetAPIResponse:
+			case *dataset.ErrInvalidDatasetAPIResponse:
 				if putErr.Code() == http.StatusConflict {
 					log.Info(ctx, "instance state could not be set to 'completed' because it changed between putting the last dimension option and counting")
 					return nil // valid scenario, another consumer was the last one to update the post instances.
