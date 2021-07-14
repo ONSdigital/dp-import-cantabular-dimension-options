@@ -124,7 +124,7 @@ func TestHandle(t *testing.T) {
 			Convey("Then the instance is set to state completed", func() {
 				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
 				So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldResemble, testInstanceID)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldResemble, dataset.StateCompleted)
+				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldResemble, dataset.StateEditionConfirmed)
 				So(datasetAPIClient.PutInstanceStateCalls()[0].IfMatch, ShouldResemble, testETag)
 			})
 
@@ -161,10 +161,10 @@ func TestHandle(t *testing.T) {
 				So(err, ShouldBeNil)
 			})
 
-			Convey("Then the handler tries to set to state to completed", func() {
+			Convey("Then the handler tries to set to state to edition-confirmed", func() {
 				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
 				So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldResemble, testInstanceID)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldResemble, dataset.StateCompleted)
+				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldResemble, dataset.StateEditionConfirmed)
 				So(datasetAPIClient.PutInstanceStateCalls()[0].IfMatch, ShouldResemble, testETag)
 			})
 		})
@@ -515,7 +515,7 @@ func TestHandleFailure(t *testing.T) {
 		})
 	})
 
-	Convey("Given a handler with an instance in submitted state and that the last dimension has been imported by this consumer, but the state cannot be set to completed", t, func() {
+	Convey("Given a handler with an instance in submitted state and that the last dimension has been imported by this consumer, but the state fail to change", t, func() {
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyComplete()
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
@@ -526,7 +526,7 @@ func TestHandleFailure(t *testing.T) {
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
 			So(err, ShouldResemble, handler.NewError(
-				fmt.Errorf("error while trying to set the instance to completed state: %w", errDataset),
+				fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errDataset),
 				log.Data{"event": &testEvent},
 			))
 		})

@@ -128,46 +128,17 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		"dimension": e.DimensionID,
 	})
 
-	// Count the total number of dimension options for this instance, and update the instance state to 'completed' if all values have been imported
+	// Count the total number of dimension options for this instance, and update the instance state to 'edition-confirmed' if all values have been imported
 	dims, eTag, err := h.datasets.GetInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, &dataset.QueryParams{Limit: 0}, headers.IfMatchAnyETag)
 	if err != nil {
 		return h.instanceFailed(ctx, fmt.Errorf("error counting instance dimensions: %w", err), e)
 	}
 
+	// if all dimension options have been added to the instance, we might need to change states and trigger a kafka message
 	if dims.TotalCount == resp.Dataset.Size {
-		// Check if this was the last dimension that was updated - then update instance to 'completed' state
-		// Set instance to complete if and only if all dimension options have been added and we were the last ones to add a dimension option (i.e. eTag did not change between updating and counting)
-		// This will guarantee that this is done exactly once, because if the instance changed, this request will fail with 409, and the other consumer that set the last value will do the update
-		_, err = h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateCompleted, eTag)
-		if err != nil {
-			switch putErr := err.(type) {
-			case *dataset.ErrInvalidDatasetAPIResponse:
-				if putErr.Code() == http.StatusConflict {
-					log.Info(ctx, "instance state could not be set to 'completed' because it changed between putting the last dimension option and counting")
-					return nil // valid scenario, another consumer was the last one to update the post instances.
-				}
-			}
-			return &Error{
-				err:     fmt.Errorf("error while trying to set the instance to completed state: %w", err),
-				logData: log.Data{"event": e},
-			}
-		}
-
-		// Import api update job to completed state
-		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
-			return fmt.Errorf("error updating import job to completed state: %w", err)
-		}
-
-		// create InstanceComplete event and Marshal it
-		bytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
-			InstanceID: e.InstanceID,
-		})
-		if err != nil {
+		if err = h.onLastDimension(ctx, e, eTag); err != nil {
 			return err
 		}
-
-		// Send bytes to kafka producer output channel
-		h.producer.Channels().Output <- bytes
 	}
 
 	return nil
@@ -182,4 +153,46 @@ func (h *CategoryDimensionImport) instanceFailed(ctx context.Context, err error,
 		}
 	}
 	return err
+}
+
+// onLastDimension handles the case where all dimensions have been updated to the instance.
+// If the eTag did not change since the last update, then we know that this consumer was the last one to update the instance. In that case:
+// - Set instance to edition-confirmed
+// - Set import job to completed state
+// - send an InstanceComplete kafka message
+func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.CategoryDimensionImport, eTag string) error {
+
+	// set instance to 'edition-confirmed' state, only if the eTag value did not change
+	_, err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateEditionConfirmed, eTag)
+	if err != nil {
+		switch putErr := err.(type) {
+		case *dataset.ErrInvalidDatasetAPIResponse:
+			if putErr.Code() == http.StatusConflict {
+				log.Info(ctx, "instance state could not be set to 'edition-confirmed' because it changed between putting the last dimension option and counting")
+				return nil // valid scenario, another consumer was the last one to update the post instances.
+			}
+		}
+		return &Error{
+			err:     fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", err),
+			logData: log.Data{"event": e},
+		}
+	}
+
+	// Import api update job to completed state
+	if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
+		return fmt.Errorf("error updating import job to completed state: %w", err)
+	}
+
+	// create InstanceComplete event and Marshal it
+	bytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+		InstanceID: e.InstanceID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Send bytes to kafka producer output channel
+	h.producer.Channels().Output <- bytes
+
+	return nil
 }
