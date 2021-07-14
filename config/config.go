@@ -22,6 +22,7 @@ type Config struct {
 	InstanceCompleteTopic        string        `envconfig:"INSTANCE_COMPLETE_TOPIC"`
 	OutputFilePath               string        `envconfig:"OUTPUT_FILE_PATH"` // TODO remove this when the handle logic is implemented
 	DatasetAPIURL                string        `envconfig:"DATASET_API_URL"`
+	ImportAPIURL                 string        `envconfig:"IMPORT_API_URL"`
 	CantabularURL                string        `envconfig:"CANTABULAR_URL"`
 	ServiceAuthToken             string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 }
@@ -51,6 +52,7 @@ func Get() (*Config, error) {
 		OutputFilePath:               "/tmp/helloworld.txt", // TODO remove this when the handle logic is implemented
 		DatasetAPIURL:                "http://localhost:22000",
 		CantabularURL:                "http://localhost:8491",
+		ImportAPIURL:                 "http://localhost:21800",
 		ServiceAuthToken:             "",
 	}
 

@@ -7,3 +7,7 @@ type CategoryDimensionImport struct {
 	DimensionID    string `avro:"dimension_id"`
 	CantabularBlob string `avro:"cantabular_blob"`
 }
+
+type InstanceComplete struct {
+	InstanceID string `avro:"instance_id"`
+}

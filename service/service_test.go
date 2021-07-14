@@ -75,6 +75,13 @@ func TestInit(t *testing.T) {
 		}
 		service.GetDatasetAPIClient = func(cfg *config.Config) service.DatasetAPIClient { return datasetAPIMock }
 
+		importAPIMock := &serviceMock.ImportAPIClientMock{
+			CheckerFunc: func(context.Context, *healthcheck.CheckState) error {
+				return nil
+			},
+		}
+		service.GetImportAPIClient = func(cfg *config.Config) service.ImportAPIClient { return importAPIMock }
+
 		svc := &service.Service{}
 
 		Convey("Given that initialising Kafka consumer returns an error", func() {
@@ -151,11 +158,12 @@ func TestInit(t *testing.T) {
 				So(svc.Server, ShouldResemble, serverMock)
 
 				Convey("And all checks are registered", func() {
-					So(hcMock.AddCheckCalls(), ShouldHaveLength, 4)
+					So(hcMock.AddCheckCalls(), ShouldHaveLength, 5)
 					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka consumer")
 					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka producer")
 					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Cantabular")
 					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Import API")
 				})
 			})
 		})

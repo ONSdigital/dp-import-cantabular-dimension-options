@@ -11,22 +11,30 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/v2/headers"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
+const StateImportCompleted = "completed"
+
 // CategoryDimensionImport is the handle for the CategoryDimensionImport event
 type CategoryDimensionImport struct {
-	cfg      config.Config
-	ctblr    CantabularClient
-	datasets DatasetAPIClient
+	cfg       config.Config
+	ctblr     CantabularClient
+	datasets  DatasetAPIClient
+	importApi ImportAPIClient
+	producer  kafka.IProducer
 }
 
 // NewCategoryDimensionImport creates a new CategoryDimensionImport with the provided config and Cantabular client
-func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d DatasetAPIClient) *CategoryDimensionImport {
+func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d DatasetAPIClient, i ImportAPIClient, p kafka.IProducer) *CategoryDimensionImport {
 	return &CategoryDimensionImport{
-		cfg:      cfg,
-		ctblr:    c,
-		datasets: d,
+		cfg:       cfg,
+		ctblr:     c,
+		datasets:  d,
+		importApi: i,
+		producer:  p,
 	}
 }
 
@@ -44,7 +52,7 @@ func (h *CategoryDimensionImport) getSubmittedInstance(ctx context.Context, e *e
 	// validate instance state
 	if i.State != dataset.StateSubmitted.String() {
 		return i, "", &Error{
-			err:     errors.New("instance is in wrong state, no dimensions options will be imported"),
+			err:     errors.New("instance is in wrong state, no more dimensions options will be imported"),
 			logData: log.Data{"event": e, "instance_state": i.State},
 		}
 	}
@@ -140,14 +148,26 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 				}
 			}
 			return &Error{
-				err:     err,
+				err:     fmt.Errorf("error while trying to set the instance to completed state: %w", err),
 				logData: log.Data{"event": e},
 			}
 		}
 
-		// TODO import api update
+		// Import api update job to completed state
+		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
+			return fmt.Errorf("error updating import job to completed state: %w", err)
+		}
 
-		// TODO send kafka message
+		// create InstanceComplete event and Marshal it
+		bytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+			InstanceID: e.InstanceID,
+		})
+		if err != nil {
+			return err
+		}
+
+		// Send bytes to kafka producer output channel
+		h.producer.Channels().Output <- bytes
 	}
 
 	return nil
