@@ -146,7 +146,28 @@ func TestHandle(t *testing.T) {
 		})
 	})
 
-	Convey("Given a successful event handler, valid cantabular data, an instance in submitted state and that the last dimension has been imported by another consumer", t, func() {
+	Convey("Given a successful event handler, valid cantabular data, an instance in submitted state and that the last dimension has been imported by another consumer just before we count the number of dimensions options", t, func() {
+		ctblrClient := cantabularClientHappy()
+		datasetAPIClient := datasetAPIClientHappyComplete()
+		datasetAPIClient.GetInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, q *dataset.QueryParams, ifMatch string) (dataset.Dimensions, string, error) {
+			return testInstanceDimensions(cantabularSize), newETag, nil
+		}
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, nil, nil)
+
+		Convey("When Handle is triggered", func() {
+			err := eventHandler.Handle(ctx, &testEvent)
+
+			Convey("Then no error is returned", func() {
+				So(err, ShouldBeNil)
+			})
+
+			Convey("Then the handler does not try to update the instance state", func() {
+				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 0)
+			})
+		})
+	})
+
+	Convey("Given a successful event handler, valid cantabular data, an instance in submitted state and that the last dimension has been imported by another consumer just before we try to update the instance state", t, func() {
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyComplete()
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
@@ -161,7 +182,7 @@ func TestHandle(t *testing.T) {
 				So(err, ShouldBeNil)
 			})
 
-			Convey("Then the handler tries to set to state to edition-confirmed", func() {
+			Convey("Then the handler tries to set the instance state to edition-confirmed", func() {
 				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
 				So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldResemble, testInstanceID)
 				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldResemble, dataset.StateEditionConfirmed)

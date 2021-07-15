@@ -27,7 +27,7 @@ type CategoryDimensionImport struct {
 	producer  kafka.IProducer
 }
 
-// NewCategoryDimensionImport creates a new CategoryDimensionImport with the provided config and Cantabular client
+// NewCategoryDimensionImport creates a new CategoryDimensionImport with the provided config and clients
 func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d DatasetAPIClient, i ImportAPIClient, p kafka.IProducer) *CategoryDimensionImport {
 	return &CategoryDimensionImport{
 		cfg:       cfg,
@@ -39,17 +39,18 @@ func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d Dataset
 }
 
 // getSubmittedInstance gets an instance from Dataset API and validates that it is in submitted state.
-// If the instance could not be obtained, we try to set it to 'failed' state
+// If the instance could not be obtained, we try to set it to 'failed' state, but if the state validation fails, we do not change the state.
 func (h *CategoryDimensionImport) getSubmittedInstance(ctx context.Context, e *event.CategoryDimensionImport, ifMatch string) (i dataset.Instance, eTag string, err error) {
 
 	// get instance
 	i, eTag, err = h.datasets.GetInstance(ctx, "", h.cfg.ServiceAuthToken, "", e.InstanceID, ifMatch)
 	if err != nil {
+		// set instance state to failed because it could not be obtained and the import process will be aborted.
 		// TODO we might want to retry this, once retries are implemented
 		return i, "", h.instanceFailed(ctx, fmt.Errorf("error getting instance from dataset-api: %w", err), e)
 	}
 
-	// validate instance state
+	// validate that instance is in 'submitted' state
 	if i.State != dataset.StateSubmitted.String() {
 		return i, "", &Error{
 			err:     errors.New("instance is in wrong state, no more dimensions options will be imported"),
@@ -81,6 +82,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		Variables:   []string{e.DimensionID},
 	})
 	if err != nil {
+		// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.
 		// TODO we might want to retry this, once retries are implemented
 		return h.instanceFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
 	}
@@ -88,6 +90,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	// validate that there is exactly one Codebook in the response
 	if resp == nil || resp.Codebook == nil || len(resp.Codebook) != 1 {
 		err := NewError(errors.New("unexpected response from Cantabular server"), log.Data{"response": resp})
+		// set instance state to failed because cantabular response is invalid and the import process will be aborted.
 		return h.instanceFailed(ctx, err, e)
 	}
 
@@ -105,18 +108,23 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		}, eTag)
 		if err != nil {
 			switch errPost := err.(type) {
+			// ErrInvalidDatasetAPIResponse covers the case where the dataset API responded with an unexpected Status Code.
+			// If the status code was 409 Conflict, then it means that the instance changed since the last call.
 			case *dataset.ErrInvalidDatasetAPIResponse:
 				if errPost.Code() == http.StatusConflict {
+					// check that the instance is still in 'submitted' state
 					_, eTag, err = h.getSubmittedInstance(ctx, e, headers.IfMatchAnyETag)
 					if err != nil {
 						return err
 					}
-					i-- // retry with new eTag value, as the instance is still in a valid state
+					i-- // retry this iteration with new eTag value, as the instance is still in a valid state
 					continue
 				} else {
+					// any other unexpected status code results in the import process failing
 					return h.instanceFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
 				}
 			default:
+				// any other error type results in the import process failing
 				return h.instanceFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
 			}
 		}
@@ -128,14 +136,16 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		"dimension": e.DimensionID,
 	})
 
-	// Count the total number of dimension options for this instance, and update the instance state to 'edition-confirmed' if all values have been imported
-	dims, eTag, err := h.datasets.GetInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, &dataset.QueryParams{Limit: 0}, headers.IfMatchAnyETag)
+	// Count the total number of dimension options for this instance
+	dims, newETag, err := h.datasets.GetInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, &dataset.QueryParams{Limit: 0}, headers.IfMatchAnyETag)
 	if err != nil {
+		// TODO we might want to retry this, once retries are implemented
 		return h.instanceFailed(ctx, fmt.Errorf("error counting instance dimensions: %w", err), e)
 	}
 
-	// if all dimension options have been added to the instance, we might need to change states and trigger a kafka message
-	if dims.TotalCount == resp.Dataset.Size {
+	// if all dimension options have been added to the instance and the instance did not change between the last update and the count,
+	// then we might need to change states and trigger a kafka message
+	if newETag == eTag && dims.TotalCount == resp.Dataset.Size {
 		if err = h.onLastDimension(ctx, e, eTag); err != nil {
 			return err
 		}
@@ -163,15 +173,23 @@ func (h *CategoryDimensionImport) instanceFailed(ctx context.Context, err error,
 func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.CategoryDimensionImport, eTag string) error {
 
 	// set instance to 'edition-confirmed' state, only if the eTag value did not change
-	_, err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateEditionConfirmed, eTag)
+	newETag, err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateEditionConfirmed, eTag)
 	if err != nil {
 		switch putErr := err.(type) {
 		case *dataset.ErrInvalidDatasetAPIResponse:
+			// ErrInvalidDatasetAPIResponse covers the case where the dataset API responded with an unexpected Status Code.
+			// If the status code was 409 Conflict, then it means that the instance changed since the last call.
 			if putErr.Code() == http.StatusConflict {
-				log.Info(ctx, "instance state could not be set to 'edition-confirmed' because it changed between putting the last dimension option and counting")
-				return nil // valid scenario, another consumer was the last one to update the post instances.
+				log.Info(ctx, "instance state could not be set to 'edition-confirmed' because the eTag value changed between posting the last dimension option and counting the number of dimension options. This is a valid scenario, another consumer was the last one to update the instance, and it will be responsibe of updating the instance and import job states, and sending the kafka message",
+					log.Data{
+						"event":    e,
+						"old_etag": eTag,
+						"new_etag": newETag,
+					})
+				return nil
 			}
 		}
+		// for generic errors or any other unexpected status code, we return an error.
 		return &Error{
 			err:     fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", err),
 			logData: log.Data{"event": e},
