@@ -43,7 +43,20 @@ var (
 
 func TestHandle(t *testing.T) {
 
+	// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
+	sleepRandomCalls := []int{}
+	originalSleepRandom := handler.SleepRandom
+	handler.SleepRandom = func(attempt int) {
+		sleepRandomCalls = append(sleepRandomCalls, attempt)
+	}
+	defer func() {
+		handler.SleepRandom = originalSleepRandom
+	}()
+
 	Convey("Given a successful event handler, valid cantabular data, and an instance in submitted state", t, func() {
+
+		sleepRandomCalls = []int{}
+
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappy()
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, nil, nil)
@@ -100,6 +113,10 @@ func TestHandle(t *testing.T) {
 					Name:     "test-variable",
 				})
 			})
+
+			Convey("Then we do not sleep between calls", func() {
+				So(sleepRandomCalls, ShouldHaveLength, 0)
+			})
 		})
 	})
 
@@ -142,6 +159,10 @@ func TestHandle(t *testing.T) {
 				So(err, ShouldBeNil)
 				sentBytes := <-producer.Channels().Output
 				So(sentBytes, ShouldResemble, expectedBytes)
+			})
+
+			Convey("Then we do not sleep between calls", func() {
+				So(sleepRandomCalls, ShouldHaveLength, 0)
 			})
 		})
 	})
@@ -192,6 +213,7 @@ func TestHandle(t *testing.T) {
 	})
 
 	Convey("Given a successful event handler, valid cantabular data, and an instance in submitted state, with an ETag that changes after the first post", t, func() {
+		sleepRandomCalls = []int{}
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := mock.DatasetAPIClientMock{}
 		datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
@@ -290,11 +312,26 @@ func TestHandle(t *testing.T) {
 					Name:     "test-variable",
 				})
 			})
+
+			Convey("Then we slept once between calls with an attempt value of 0", func() {
+				So(sleepRandomCalls, ShouldHaveLength, 1)
+				So(sleepRandomCalls[0], ShouldEqual, 0)
+			})
 		})
 	})
 }
 
 func TestHandleFailure(t *testing.T) {
+
+	// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
+	sleepRandomCalls := []int{}
+	originalSleepRandom := handler.SleepRandom
+	handler.SleepRandom = func(attempt int) {
+		sleepRandomCalls = append(sleepRandomCalls, attempt)
+	}
+	defer func() {
+		handler.SleepRandom = originalSleepRandom
+	}()
 
 	Convey("Given a handler with a dataset api client that returns an instance in a non-submitted state", t, func() {
 		datasetAPIClient := mock.DatasetAPIClientMock{

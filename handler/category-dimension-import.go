@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
 	"net/http"
+	"time"
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
 	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
@@ -16,7 +19,11 @@ import (
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
+// StateImportCompleted is the 'completed' state for an import job
 const StateImportCompleted = "completed"
+
+// ConflictRetryPeriod is the initial time period between post dimension option retries
+var ConflictRetryPeriod = 250 * time.Millisecond
 
 // CategoryDimensionImport is the handle for the CategoryDimensionImport event
 type CategoryDimensionImport struct {
@@ -98,6 +105,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 	// Post a new dimension option for each item. If the eTag value changes from one call to another, validate the instance state again, and abort if it is not 'submitted'
 	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimension options), similar to what we did in Filter API.
+	attempt := 0
 	for i := 0; i < variable.Len; i++ {
 		_, err := h.datasets.PostInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.OptionPost{
 			Name:     variable.Name,
@@ -118,6 +126,8 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 						return err
 					}
 					i-- // retry this iteration with new eTag value, as the instance is still in a valid state
+					SleepRandom(attempt)
+					attempt++
 					continue
 				} else {
 					// any other unexpected status code results in the import process failing
@@ -128,6 +138,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 				return h.instanceFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
 			}
 		}
+		attempt = 0
 	}
 
 	log.Info(ctx, "successfully posted all dimension options to dataset api", log.Data{
@@ -213,4 +224,20 @@ func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.
 	h.producer.Channels().Output <- bytes
 
 	return nil
+}
+
+// getRetryTime will return a time based on the attempt and initial retry time.
+// It uses the algorithm 2^n where n is the attempt number (double the previous) and
+// a randomization factor of between 0-5ms so that the server isn't being hit constantly
+// at the same time by many clients.
+func getRetryTime(attempt int, retryTime time.Duration) time.Duration {
+	n := (math.Pow(2, float64(attempt)))
+	rand.Seed(time.Now().Unix())
+	rnd := time.Duration(rand.Intn(4)+1) * time.Millisecond
+	return (time.Duration(n) * retryTime) - rnd
+}
+
+// SleepRandom sleeps for a random period of time, determined by teh provided attempt and the getRetryTime func
+var SleepRandom = func(attempt int) {
+	time.Sleep(getRetryTime(attempt, ConflictRetryPeriod))
 }
