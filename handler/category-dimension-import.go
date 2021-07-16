@@ -37,7 +37,8 @@ type CategoryDimensionImport struct {
 	producer  kafka.IProducer
 }
 
-// NewCategoryDimensionImport creates a new CategoryDimensionImport with the provided config and clients
+// NewCategoryDimensionImport creates a new CategoryDimensionImport with the provided config and clients.
+// Note that for clients using the Client provided by dp-net/http, a mechanism to retry on 5xx status code is already in place.
 func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d DatasetAPIClient, i ImportAPIClient, p kafka.IProducer) *CategoryDimensionImport {
 	return &CategoryDimensionImport{
 		cfg:       cfg,
