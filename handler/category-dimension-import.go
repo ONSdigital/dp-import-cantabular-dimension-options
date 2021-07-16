@@ -49,9 +49,9 @@ func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d Dataset
 	}
 }
 
-// getSubmittedInstance gets an instance from Dataset API and validates that it is in submitted state.
+// getCompletedInstance gets an instance from Dataset API and validates that it is in completed state.
 // If the instance could not be obtained, we try to set it to 'failed' state, but if the state validation fails, we do not change the state.
-func (h *CategoryDimensionImport) getSubmittedInstance(ctx context.Context, e *event.CategoryDimensionImport, ifMatch string) (i dataset.Instance, eTag string, err error) {
+func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *event.CategoryDimensionImport, ifMatch string) (i dataset.Instance, eTag string, err error) {
 
 	// get instance
 	i, eTag, err = h.datasets.GetInstance(ctx, "", h.cfg.ServiceAuthToken, "", e.InstanceID, ifMatch)
@@ -61,8 +61,8 @@ func (h *CategoryDimensionImport) getSubmittedInstance(ctx context.Context, e *e
 		return i, "", h.instanceFailed(ctx, fmt.Errorf("error getting instance from dataset-api: %w", err), e)
 	}
 
-	// validate that instance is in 'submitted' state
-	if i.State != dataset.StateSubmitted.String() {
+	// validate that instance is in 'completed' state
+	if i.State != dataset.StateCompleted.String() {
 		return i, "", &Error{
 			err:     errors.New("instance is in wrong state, no more dimensions options will be imported"),
 			logData: log.Data{"event": e, "instance_state": i.State},
@@ -80,8 +80,8 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	}
 	log.Info(ctx, "event handler called", logData)
 
-	// get instance state and check that it is in submitted state
-	_, eTag, err := h.getSubmittedInstance(ctx, e, headers.IfMatchAnyETag)
+	// get instance state and check that it is in completed state
+	_, eTag, err := h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 	variable := resp.Codebook[0]
 
-	// Post a new dimension option for each item. If the eTag value changes from one call to another, validate the instance state again, and abort if it is not 'submitted'
+	// Post a new dimension option for each item. If the eTag value changes from one call to another, validate the instance state again, and abort if it is not 'completed'
 	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimension options), similar to what we did in Filter API.
 	attempt := 0
 	for i := 0; i < variable.Len; i++ {
@@ -133,8 +133,8 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 					// sleep an exponential random time before retrying
 					SleepRandom(attempt)
 
-					// check that the instance is still in 'submitted' state
-					_, eTag, err = h.getSubmittedInstance(ctx, e, headers.IfMatchAnyETag)
+					// check that the instance is still in 'completed' state
+					_, eTag, err = h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
 					if err != nil {
 						return err
 					}

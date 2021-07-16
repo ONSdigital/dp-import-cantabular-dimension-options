@@ -43,7 +43,7 @@ var (
 
 func TestHandle(t *testing.T) {
 
-	Convey("Given a successful event handler, valid cantabular data, and an instance in submitted state", t, func() {
+	Convey("Given a successful event handler, valid cantabular data, and an instance in completed state", t, func() {
 
 		// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
 		sleepRandomCalls := []int{}
@@ -118,7 +118,7 @@ func TestHandle(t *testing.T) {
 		})
 	})
 
-	Convey("Given a successful event handler, valid cantabular data, an instance in submitted state and that the last dimension has been imported by this consumer", t, func() {
+	Convey("Given a successful event handler, valid cantabular data, an instance in completed state and that the last dimension has been imported by this consumer", t, func() {
 		// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
 		sleepRandomCalls := []int{}
 		originalSleepRandom := handler.SleepRandom
@@ -130,7 +130,7 @@ func TestHandle(t *testing.T) {
 		}()
 
 		ctblrClient := cantabularClientHappy()
-		datasetAPIClient := datasetAPIClientHappyComplete()
+		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := mock.ImportAPIClientMock{
 			UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
 				return nil
@@ -175,9 +175,9 @@ func TestHandle(t *testing.T) {
 		})
 	})
 
-	Convey("Given a successful event handler, valid cantabular data, an instance in submitted state and that the last dimension has been imported by another consumer just before we count the number of dimensions options", t, func() {
+	Convey("Given a successful event handler, valid cantabular data, an instance in completed state and that the last dimension has been imported by another consumer just before we count the number of dimensions options", t, func() {
 		ctblrClient := cantabularClientHappy()
-		datasetAPIClient := datasetAPIClientHappyComplete()
+		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		datasetAPIClient.GetInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, q *dataset.QueryParams, ifMatch string) (dataset.Dimensions, string, error) {
 			return testInstanceDimensions(cantabularSize), newETag, nil
 		}
@@ -196,9 +196,9 @@ func TestHandle(t *testing.T) {
 		})
 	})
 
-	Convey("Given a successful event handler, valid cantabular data, an instance in submitted state and that the last dimension has been imported by another consumer just before we try to update the instance state", t, func() {
+	Convey("Given a successful event handler, valid cantabular data, an instance in completed state and that the last dimension has been imported by another consumer just before we try to update the instance state", t, func() {
 		ctblrClient := cantabularClientHappy()
-		datasetAPIClient := datasetAPIClientHappyComplete()
+		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 			return "", dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusConflict}, "uri")
 		}
@@ -220,7 +220,7 @@ func TestHandle(t *testing.T) {
 		})
 	})
 
-	Convey("Given a successful event handler, valid cantabular data, and an instance in submitted state, with an ETag that changes after the first post", t, func() {
+	Convey("Given a successful event handler, valid cantabular data, and an instance in completed state, with an ETag that changes after the first post", t, func() {
 		// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
 		sleepRandomCalls := []int{}
 		originalSleepRandom := handler.SleepRandom
@@ -246,7 +246,7 @@ func TestHandle(t *testing.T) {
 		datasetAPIClient.GetInstanceFunc = func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 			inst := dataset.Instance{
 				Version: dataset.Version{
-					State: dataset.StateSubmitted.String(),
+					State: dataset.StateCompleted.String(),
 				},
 			}
 			switch len(datasetAPIClient.PostInstanceDimensionsCalls()) {
@@ -340,12 +340,12 @@ func TestHandle(t *testing.T) {
 
 func TestHandleFailure(t *testing.T) {
 
-	Convey("Given a handler with a dataset api client that returns an instance in a non-submitted state", t, func() {
+	Convey("Given a handler with a dataset api client that returns an instance in a non-completed state", t, func() {
 		datasetAPIClient := mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{
 					Version: dataset.Version{
-						State: dataset.StateCompleted.String(),
+						State: dataset.StateFailed.String(),
 					},
 				}, testETag, nil
 			},
@@ -356,7 +356,7 @@ func TestHandleFailure(t *testing.T) {
 			err := eventHandler.Handle(ctx, &testEvent)
 			So(err, ShouldResemble, handler.NewError(
 				errors.New("instance is in wrong state, no more dimensions options will be imported"),
-				log.Data{"event": &testEvent, "instance_state": dataset.StateCompleted.String()},
+				log.Data{"event": &testEvent, "instance_state": dataset.StateFailed.String()},
 			))
 		})
 	})
@@ -367,7 +367,7 @@ func TestHandleFailure(t *testing.T) {
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{
 					Version: dataset.Version{
-						State: dataset.StateSubmitted.String(),
+						State: dataset.StateCompleted.String(),
 					},
 				}, testETag, nil
 			},
@@ -420,7 +420,7 @@ func TestHandleFailure(t *testing.T) {
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{
 					Version: dataset.Version{
-						State: dataset.StateSubmitted.String(),
+						State: dataset.StateCompleted.String(),
 					},
 				}, testETag, nil
 			},
@@ -484,7 +484,7 @@ func TestHandleFailure(t *testing.T) {
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{
 					Version: dataset.Version{
-						State: dataset.StateSubmitted.String(),
+						State: dataset.StateCompleted.String(),
 					},
 				}, testETag, nil
 			},
@@ -540,7 +540,7 @@ func TestHandleFailure(t *testing.T) {
 			})
 		})
 
-		Convey("Where dataset API returns a Conflict error on PostInstanceDimensions and the instance has changed to state completed", func() {
+		Convey("Where dataset API returns a Conflict error on PostInstanceDimensions and the instance has changed to state failed", func() {
 			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusConflict}, "uri")
 			datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
 				return "", errPostInstance
@@ -550,13 +550,13 @@ func TestHandleFailure(t *testing.T) {
 				case 0:
 					return dataset.Instance{
 						Version: dataset.Version{
-							State: dataset.StateSubmitted.String(),
+							State: dataset.StateCompleted.String(),
 						},
 					}, testETag, nil
 				default:
 					return dataset.Instance{
 						Version: dataset.Version{
-							State: dataset.StateCompleted.String(),
+							State: dataset.StateFailed.String(),
 						},
 					}, newETag, nil
 				}
@@ -569,7 +569,7 @@ func TestHandleFailure(t *testing.T) {
 				Convey("Then the expected error is returned", func() {
 					So(err, ShouldResemble, handler.NewError(
 						errors.New("instance is in wrong state, no more dimensions options will be imported"),
-						log.Data{"event": &testEvent, "instance_state": dataset.StateCompleted.String()},
+						log.Data{"event": &testEvent, "instance_state": dataset.StateFailed.String()},
 					))
 				})
 
@@ -621,9 +621,9 @@ func TestHandleFailure(t *testing.T) {
 		})
 	})
 
-	Convey("Given a handler with an instance in submitted state and that the last dimension has been imported by this consumer, but the state fail to change", t, func() {
+	Convey("Given a handler with an instance in completed state and that the last dimension has been imported by this consumer, but the state fails to change", t, func() {
 		ctblrClient := cantabularClientHappy()
-		datasetAPIClient := datasetAPIClientHappyComplete()
+		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 			return "", errDataset
 		}
@@ -666,7 +666,7 @@ func TestHandleFailure(t *testing.T) {
 
 	Convey("Given a handler with with a failing import API", t, func() {
 		ctblrClient := cantabularClientHappy()
-		datasetAPIClient := datasetAPIClientHappyComplete()
+		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := mock.ImportAPIClientMock{
 			UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
 				return errImportAPI
@@ -754,7 +754,7 @@ func datasetAPIClientHappy() mock.DatasetAPIClientMock {
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 			return dataset.Instance{
 				Version: dataset.Version{
-					State: dataset.StateSubmitted.String(),
+					State: dataset.StateCompleted.String(),
 				},
 			}, testETag, nil
 		},
@@ -764,7 +764,7 @@ func datasetAPIClientHappy() mock.DatasetAPIClientMock {
 	}
 }
 
-func datasetAPIClientHappyComplete() mock.DatasetAPIClientMock {
+func datasetAPIClientHappyLastDimension() mock.DatasetAPIClientMock {
 	return mock.DatasetAPIClientMock{
 		PostInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
 			return testETag, nil
@@ -772,7 +772,7 @@ func datasetAPIClientHappyComplete() mock.DatasetAPIClientMock {
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 			return dataset.Instance{
 				Version: dataset.Version{
-					State: dataset.StateSubmitted.String(),
+					State: dataset.StateCompleted.String(),
 				},
 			}, testETag, nil
 		},
