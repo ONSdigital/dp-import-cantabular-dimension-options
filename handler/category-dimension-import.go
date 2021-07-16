@@ -22,6 +22,9 @@ import (
 // StateImportCompleted is the 'completed' state for an import job
 const StateImportCompleted = "completed"
 
+// MaxConflictRetries defines the maximum number of times that a post request will be retired after a conflict response
+const MaxConflictRetries = 10
+
 // ConflictRetryPeriod is the initial time period between post dimension option retries
 var ConflictRetryPeriod = 250 * time.Millisecond
 
@@ -120,15 +123,26 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 			// If the status code was 409 Conflict, then it means that the instance changed since the last call.
 			case *dataset.ErrInvalidDatasetAPIResponse:
 				if errPost.Code() == http.StatusConflict {
+
+					// check if we have already attemtped to post the instance more than MaxConflictRetries times
+					if attempt >= MaxConflictRetries {
+						return h.instanceFailed(ctx, fmt.Errorf("aborting import process after %d retries resulting in conflict on post dimension", MaxConflictRetries), e)
+					}
+
+					// sleep an exponential random time before retrying
+					SleepRandom(attempt)
+
 					// check that the instance is still in 'submitted' state
 					_, eTag, err = h.getSubmittedInstance(ctx, e, headers.IfMatchAnyETag)
 					if err != nil {
 						return err
 					}
-					i-- // retry this iteration with new eTag value, as the instance is still in a valid state
-					SleepRandom(attempt)
+
+					// instance is still in valid state and eTag has been updated. Retry this iteration
+					i--
 					attempt++
 					continue
+
 				} else {
 					// any other unexpected status code results in the import process failing
 					return h.instanceFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
@@ -237,7 +251,7 @@ func getRetryTime(attempt int, retryTime time.Duration) time.Duration {
 	return (time.Duration(n) * retryTime) - rnd
 }
 
-// SleepRandom sleeps for a random period of time, determined by teh provided attempt and the getRetryTime func
+// SleepRandom sleeps for a random period of time, determined by the provided attempt and the getRetryTime func
 var SleepRandom = func(attempt int) {
 	time.Sleep(getRetryTime(attempt, ConflictRetryPeriod))
 }

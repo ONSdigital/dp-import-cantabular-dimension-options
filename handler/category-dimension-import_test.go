@@ -43,19 +43,17 @@ var (
 
 func TestHandle(t *testing.T) {
 
-	// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
-	sleepRandomCalls := []int{}
-	originalSleepRandom := handler.SleepRandom
-	handler.SleepRandom = func(attempt int) {
-		sleepRandomCalls = append(sleepRandomCalls, attempt)
-	}
-	defer func() {
-		handler.SleepRandom = originalSleepRandom
-	}()
-
 	Convey("Given a successful event handler, valid cantabular data, and an instance in submitted state", t, func() {
 
-		sleepRandomCalls = []int{}
+		// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
+		sleepRandomCalls := []int{}
+		originalSleepRandom := handler.SleepRandom
+		handler.SleepRandom = func(attempt int) {
+			sleepRandomCalls = append(sleepRandomCalls, attempt)
+		}
+		defer func() {
+			handler.SleepRandom = originalSleepRandom
+		}()
 
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappy()
@@ -121,6 +119,16 @@ func TestHandle(t *testing.T) {
 	})
 
 	Convey("Given a successful event handler, valid cantabular data, an instance in submitted state and that the last dimension has been imported by this consumer", t, func() {
+		// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
+		sleepRandomCalls := []int{}
+		originalSleepRandom := handler.SleepRandom
+		handler.SleepRandom = func(attempt int) {
+			sleepRandomCalls = append(sleepRandomCalls, attempt)
+		}
+		defer func() {
+			handler.SleepRandom = originalSleepRandom
+		}()
+
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyComplete()
 		importAPIClient := mock.ImportAPIClientMock{
@@ -213,7 +221,16 @@ func TestHandle(t *testing.T) {
 	})
 
 	Convey("Given a successful event handler, valid cantabular data, and an instance in submitted state, with an ETag that changes after the first post", t, func() {
-		sleepRandomCalls = []int{}
+		// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
+		sleepRandomCalls := []int{}
+		originalSleepRandom := handler.SleepRandom
+		handler.SleepRandom = func(attempt int) {
+			sleepRandomCalls = append(sleepRandomCalls, attempt)
+		}
+		defer func() {
+			handler.SleepRandom = originalSleepRandom
+		}()
+
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := mock.DatasetAPIClientMock{}
 		datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
@@ -322,16 +339,6 @@ func TestHandle(t *testing.T) {
 }
 
 func TestHandleFailure(t *testing.T) {
-
-	// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
-	sleepRandomCalls := []int{}
-	originalSleepRandom := handler.SleepRandom
-	handler.SleepRandom = func(attempt int) {
-		sleepRandomCalls = append(sleepRandomCalls, attempt)
-	}
-	defer func() {
-		handler.SleepRandom = originalSleepRandom
-	}()
 
 	Convey("Given a handler with a dataset api client that returns an instance in a non-submitted state", t, func() {
 		datasetAPIClient := mock.DatasetAPIClientMock{
@@ -568,6 +575,47 @@ func TestHandleFailure(t *testing.T) {
 
 				Convey("Then the instance state is not changed", func() {
 					So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 0)
+				})
+			})
+		})
+
+		Convey("Where dataset API always returns a Conflict error on PostInstanceDimensions", func() {
+			// mock SleepRandom to prevent delays in unit tests and to be able to validate the SleepRandom calls
+			sleepRandomCalls := []int{}
+			originalSleepRandom := handler.SleepRandom
+			handler.SleepRandom = func(attempt int) {
+				sleepRandomCalls = append(sleepRandomCalls, attempt)
+			}
+			defer func() {
+				handler.SleepRandom = originalSleepRandom
+			}()
+
+			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusConflict}, "uri")
+			datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
+				return "", errPostInstance
+			}
+			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, nil, nil)
+
+			Convey("Then when Handle is triggered", func() {
+				sleepRandomCalls = []int{}
+				err := eventHandler.Handle(ctx, &testEvent)
+
+				Convey("Then the expected error is returned", func() {
+					So(err, ShouldResemble, errors.New("aborting import process after 10 retries resulting in conflict on post dimension"))
+				})
+
+				Convey("Then the post instance dimensions is retried MaxConflictRetries times", func() {
+					So(datasetAPIClient.PostInstanceDimensionsCalls(), ShouldHaveLength, handler.MaxConflictRetries+1)
+				})
+
+				Convey("Then the random sleep is called MaxConflictRetries times with the expected attemt values", func() {
+					So(sleepRandomCalls, ShouldResemble, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+				})
+
+				Convey("Then the instance state is set to failed", func() {
+					So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
+					So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
+					So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
 				})
 			})
 		})
