@@ -29,10 +29,11 @@ func TestConfig(t *testing.T) {
 				So(cfg.KafkaAddr[0], ShouldEqual, "localhost:9092")
 				So(cfg.KafkaVersion, ShouldEqual, "1.0.2")
 				So(cfg.KafkaNumWorkers, ShouldEqual, 1)
-				So(cfg.CategoryDimensionImportGroup, ShouldEqual, "dp-import-cantabular-dimension-options")
-				So(cfg.CategoryDimensionImportTopic, ShouldEqual, "cantabular-dataset-category-dimension-import")
+				So(cfg.KafkaCategoryDimensionImportGroup, ShouldEqual, "dp-import-cantabular-dimension-options")
+				So(cfg.KafkaCategoryDimensionImportTopic, ShouldEqual, "cantabular-dataset-category-dimension-import")
 				So(cfg.DatasetAPIURL, ShouldEqual, "http://localhost:22000")
 				So(cfg.CantabularURL, ShouldEqual, "http://localhost:8491")
+				So(cfg.ImportAPIURL, ShouldEqual, "http://localhost:21800")
 				So(cfg.ServiceAuthToken, ShouldEqual, "")
 			})
 

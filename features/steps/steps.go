@@ -63,7 +63,7 @@ func (c *Component) theseHelloEventsAreConsumed(table *godog.Table) error {
 	p, err := kafka.NewProducer(
 		ctx,
 		c.cfg.KafkaAddr,
-		c.cfg.CategoryDimensionImportTopic,
+		c.cfg.KafkaCategoryDimensionImportTopic,
 		kafka.CreateProducerChannels(),
 		&kafka.ProducerConfig{
 			KafkaVersion:    &c.cfg.KafkaVersion,

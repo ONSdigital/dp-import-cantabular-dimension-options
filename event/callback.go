@@ -18,16 +18,6 @@ func statusCode(err error) int {
 	return http.StatusInternalServerError
 }
 
-// logData returns logData for an error if there is any
-func logData(err error) log.Data {
-	var lderr dataLogger
-	if errors.As(err, &lderr) {
-		return lderr.LogData()
-	}
-
-	return nil
-}
-
 // unwrapLogData recursively unwraps logData from an error
 func unwrapLogData(err error) log.Data {
 	var data []log.Data

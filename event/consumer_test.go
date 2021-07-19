@@ -16,7 +16,7 @@ import (
 
 var testCtx = context.Background()
 
-var errHandler = errors.New("Handler Error")
+var errHandler = errors.New("handler_error")
 
 var testEvent = event.CategoryDimensionImport{
 	JobID:       "testJobID",
@@ -25,14 +25,6 @@ var testEvent = event.CategoryDimensionImport{
 }
 
 var numKafkaWorkers = 1
-
-// kafkaStubConsumer mock which exposes Channels function returning empty channels
-// to be used on tests that are not supposed to receive any kafka message
-var kafkaStubConsumer = &kafkatest.IConsumerGroupMock{
-	ChannelsFunc: func() *kafka.ConsumerGroupChannels {
-		return &kafka.ConsumerGroupChannels{}
-	},
-}
 
 func TestConsume(t *testing.T) {
 
