@@ -33,7 +33,7 @@ func main() {
 	kafkaConsumer, err := kafka.NewConsumerGroup(
 		ctx,
 		config.KafkaAddr,
-		config.InstanceCompleteTopic,
+		config.KafkaInstanceCompleteTopic,
 		"test-consumer-group",
 		cgChannels,
 		&kafka.ConsumerGroupConfig{
@@ -42,7 +42,7 @@ func main() {
 		},
 	)
 	if err != nil {
-		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": config.InstanceCompleteTopic})
+		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": config.KafkaInstanceCompleteTopic})
 		os.Exit(1)
 	}
 

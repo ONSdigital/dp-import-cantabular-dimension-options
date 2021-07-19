@@ -42,8 +42,8 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IC
 	return dpkafka.NewConsumerGroup(
 		ctx,
 		cfg.KafkaAddr,
-		cfg.CategoryDimensionImportTopic,
-		cfg.CategoryDimensionImportGroup,
+		cfg.KafkaCategoryDimensionImportTopic,
+		cfg.KafkaCategoryDimensionImportGroup,
 		cgChannels,
 		&dpkafka.ConsumerGroupConfig{
 			KafkaVersion: &cfg.KafkaVersion,
@@ -57,7 +57,7 @@ var GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IPro
 	return kafka.NewProducer(
 		ctx,
 		cfg.KafkaAddr,
-		cfg.InstanceCompleteTopic,
+		cfg.KafkaInstanceCompleteTopic,
 		kafka.CreateProducerChannels(),
 		&kafka.ProducerConfig{
 			KafkaVersion:    &cfg.KafkaVersion,
@@ -153,8 +153,8 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	log.Info(ctx, "starting service...")
 
 	// Start kafka error logging
-	svc.Consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.Cfg.CategoryDimensionImportTopic)
-	svc.Producer.Channels().LogErrors(ctx, "error received from kafka producer, topic: "+svc.Cfg.InstanceCompleteTopic)
+	svc.Consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.Cfg.KafkaCategoryDimensionImportTopic)
+	svc.Producer.Channels().LogErrors(ctx, "error received from kafka producer, topic: "+svc.Cfg.KafkaInstanceCompleteTopic)
 
 	// Start consuming Kafka messages with the Event Handler
 	event.Consume(
