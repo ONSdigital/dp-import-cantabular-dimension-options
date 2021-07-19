@@ -21,7 +21,7 @@ func main() {
 	signal.Notify(signals, os.Interrupt, os.Kill)
 
 	// Get Config
-	config, err := config.Get()
+	cfg, err := config.Get()
 	if err != nil {
 		log.Fatal(ctx, "error getting config", err)
 		os.Exit(1)
@@ -32,17 +32,17 @@ func main() {
 	kafkaOffset := kafka.OffsetOldest
 	kafkaConsumer, err := kafka.NewConsumerGroup(
 		ctx,
-		config.KafkaAddr,
-		config.KafkaInstanceCompleteTopic,
+		cfg.KafkaAddr,
+		cfg.KafkaInstanceCompleteTopic,
 		"test-consumer-group",
 		cgChannels,
 		&kafka.ConsumerGroupConfig{
-			KafkaVersion: &config.KafkaVersion,
+			KafkaVersion: &cfg.KafkaVersion,
 			Offset:       &kafkaOffset,
 		},
 	)
 	if err != nil {
-		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": config.KafkaInstanceCompleteTopic})
+		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": cfg.KafkaInstanceCompleteTopic})
 		os.Exit(1)
 	}
 
@@ -63,7 +63,9 @@ func main() {
 	// blocks until an os interrupt or a fatal error occurs
 	sig := <-signals
 	log.Info(ctx, "os signal received", log.Data{"signal": sig})
-	closeConsumerGroup(ctx, kafkaConsumer, config.GracefulShutdownTimeout)
+	if err := closeConsumerGroup(ctx, kafkaConsumer, cfg.GracefulShutdownTimeout); err != nil {
+		log.Error(ctx, "error while closing consumer group", err)
+	}
 }
 
 // consume waits for messages to arrive to the upstream channel and consumes them, in an infinite loop

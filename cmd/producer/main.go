@@ -21,7 +21,7 @@ func main() {
 	ctx := context.Background()
 
 	// Get Config
-	config, err := config.Get()
+	cfg, err := config.Get()
 	if err != nil {
 		log.Fatal(ctx, "error getting config", err)
 		os.Exit(1)
@@ -29,11 +29,11 @@ func main() {
 
 	// Create Kafka Producer
 	pChannels := kafka.CreateProducerChannels()
-	kafkaProducer, err := kafka.NewProducer(ctx, config.KafkaAddr, config.KafkaCategoryDimensionImportTopic, pChannels, &kafka.ProducerConfig{
-		KafkaVersion: &config.KafkaVersion,
+	kafkaProducer, err := kafka.NewProducer(ctx, cfg.KafkaAddr, cfg.KafkaCategoryDimensionImportTopic, pChannels, &kafka.ProducerConfig{
+		KafkaVersion: &cfg.KafkaVersion,
 	})
 	if err != nil {
-		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": config.KafkaCategoryDimensionImportTopic})
+		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": cfg.KafkaCategoryDimensionImportTopic})
 		os.Exit(1)
 	}
 
