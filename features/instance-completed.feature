@@ -72,7 +72,7 @@ Feature: Import-Cantabular-Dimension-Options
     And the call to add a dimension to the instance with id "instance-happy-01" is successful
     And the instance with id "instance-happy-01" is successfully updated to "edition-confirmed" state
     And the job with id "job-happy-01" is successfully updated to "completed" state
-    And the instance with id "instance-happy-01" has 3 dimension options
+    And the instance with id "instance-happy-01" has 5 dimension options
 
     Then these instance-complete events are produced:
       | InstanceID        |
