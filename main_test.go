@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 	"testing"
 
@@ -21,7 +22,9 @@ func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
 	component := steps.NewComponent()
 
 	ctx.BeforeScenario(func(*godog.Scenario) {
-		component.Reset()
+		if err := component.Reset(); err != nil {
+			log.Panicf("unable to initialise scenario: %s", err)
+		}
 	})
 
 	ctx.AfterScenario(func(*godog.Scenario, error) {

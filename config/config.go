@@ -20,7 +20,6 @@ type Config struct {
 	KafkaCategoryDimensionImportGroup string        `envconfig:"KAFKA_CATEGORY_DIMENSION_IMPORT_GROUP"`
 	KafkaCategoryDimensionImportTopic string        `envconfig:"KAFKA_CATEGORY_DIMENSION_IMPORT_TOPIC"`
 	KafkaInstanceCompleteTopic        string        `envconfig:"KAFKA_INSTANCE_COMPLETE_TOPIC"`
-	OutputFilePath                    string        `envconfig:"OUTPUT_FILE_PATH"` // TODO remove this when the handle logic is implemented
 	DatasetAPIURL                     string        `envconfig:"DATASET_API_URL"`
 	ImportAPIURL                      string        `envconfig:"IMPORT_API_URL"`
 	CantabularURL                     string        `envconfig:"CANTABULAR_URL"`
@@ -49,7 +48,6 @@ func Get() (*Config, error) {
 		KafkaCategoryDimensionImportGroup: "dp-import-cantabular-dimension-options",
 		KafkaCategoryDimensionImportTopic: "cantabular-dataset-category-dimension-import",
 		KafkaInstanceCompleteTopic:        "cantabular-dataset-instance-complete",
-		OutputFilePath:                    "/tmp/helloworld.txt", // TODO remove this when the handle logic is implemented
 		DatasetAPIURL:                     "http://localhost:22000",
 		CantabularURL:                     "http://localhost:8491",
 		ImportAPIURL:                      "http://localhost:21800",
