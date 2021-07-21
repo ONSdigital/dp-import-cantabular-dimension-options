@@ -53,7 +53,7 @@ func Get() (*Config, error) {
 		CantabularURL:                     "http://localhost:8491",
 		ImportAPIURL:                      "http://localhost:21800",
 		ServiceAuthToken:                  "",
-		ComponentTestUseLogFile:           true,
+		ComponentTestUseLogFile:           false,
 	}
 
 	return cfg, envconfig.Process("", cfg)

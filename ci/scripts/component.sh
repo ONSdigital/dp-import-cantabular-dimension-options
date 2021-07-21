@@ -1,17 +1,14 @@
 #!/bin/bash -eux
 
+# Run component tests in docker compose defined in features/compose folder
 pushd dp-import-cantabular-dimension-options/features/compose
-  ls -la
-  # Run component tests in docker compose
   docker-compose up --abort-on-container-exit
   e=$?
 popd
 
-ls -la
-
+# Cat the component-test output file and remove it, which is stored int he project folder
 pushd dp-import-cantabular-dimension-options
   ls -la
-  # Assuming that component-test output was forwareded to component-output.txt, display it
   cat component-output.txt && rm component-output.txt
 popd
 
