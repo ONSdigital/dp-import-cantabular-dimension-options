@@ -12,3 +12,6 @@
 *.iws
 
 .go/
+
+# Component tests output for CI
+log-output.txt

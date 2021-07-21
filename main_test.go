@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	"os"
 	"testing"
 
 	componenttest "github.com/ONSdigital/dp-component-test"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/features/steps"
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
@@ -42,8 +44,25 @@ func TestComponent(t *testing.T) {
 	if *componentFlag {
 		status := 0
 
+		cfg, err := config.Get()
+		if err != nil {
+			t.Fatalf("failed to get service config: %s", err)
+		}
+
+		var output io.Writer = os.Stdout
+
+		if len(cfg.ComponentTestLogFile) > 0 {
+			logfile, err := os.Create(cfg.ComponentTestLogFile)
+			if err != nil {
+				t.Fatalf("could not create logs file: %s", err)
+			}
+
+			defer logfile.Close()
+			output = logfile
+		}
+
 		var opts = godog.Options{
-			Output: colors.Colored(os.Stdout),
+			Output: colors.Colored(output),
 			Format: "pretty",
 			Paths:  flag.Args(),
 		}
