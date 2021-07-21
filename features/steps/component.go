@@ -40,13 +40,14 @@ type Component struct {
 }
 
 func NewComponent() *Component {
-	return &Component{
-		errorChan:     make(chan error),
-		DatasetAPI:    httpfake.New(),
-		ImportAPI:     httpfake.New(),
-		CantabularSrv: httpfake.New(),
-		wg:            &sync.WaitGroup{},
+	c := &Component{
+		errorChan: make(chan error),
+		wg:        &sync.WaitGroup{},
 	}
+	c.DatasetAPI = httpfake.New(httpfake.WithTesting(c))
+	c.ImportAPI = httpfake.New(httpfake.WithTesting(c))
+	c.CantabularSrv = httpfake.New(httpfake.WithTesting(c))
+	return c
 }
 
 // initService initialises the server, the mocks and waits for the dependencies to be ready

@@ -103,9 +103,12 @@ func (c *Component) theCallToAddInstanceDimensionIsSuccessful(id string) error {
 // theCallToUpdateInstanceIsSuccessful generates a mocked response for Dataset API
 // PUT /instances/{id}
 func (c *Component) theCallToUpdateInstanceIsSuccessful(id string, state string) error {
+
+	// expectedBody := []byte("{\"state\": \"" + state + "\"}")
+
 	c.DatasetAPI.NewHandler().
+		AssertBody([]byte{1, 2, 3}). // TODO assert body contains expected state
 		Put("/instances/"+id).
-		// AssertBody([]byte{}). // TODO assert body contains expected state
 		Reply(http.StatusOK).
 		AddHeader("ETag", testETag)
 
@@ -117,7 +120,7 @@ func (c *Component) theCallToUpdateInstanceIsSuccessful(id string, state string)
 func (c *Component) theCallToUpdateJobIsSuccessful(id string, state string) error {
 	c.ImportAPI.NewHandler().
 		Put("/jobs/" + id).
-		// AssertBody([]byte{}). // TODO assert body contains expected state
+		AssertBody([]byte{1, 2, 3}). // TODO assert body contains expected state
 		Reply(http.StatusOK)
 
 	return nil
