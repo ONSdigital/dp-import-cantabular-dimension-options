@@ -30,8 +30,8 @@ func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the following response is available from Cantabular from the codebook "([^"]*)" and query "([^"]*)":$`, c.theFollowingCodebookIsAvailable)
 
 	ctx.Step(`^the call to add a dimension to the instance with id "([^"]*)" is successful`, c.theCallToAddInstanceDimensionIsSuccessful)
-	ctx.Step(`^the instance with id "([^"]*)" is successfully updated to "([^"]*)" state`, c.theCallToUpdateInstanceIsSuccessful)
-	ctx.Step(`^the job with id "([^"]*)" is successfully updated to "([^"]*)" state`, c.theCallToUpdateJobIsSuccessful)
+	ctx.Step(`^the instance with id "([^"]*)" is successfully updated`, c.theCallToUpdateInstanceIsSuccessful)
+	ctx.Step(`^the job with id "([^"]*)" is successfully updated`, c.theCallToUpdateJobIsSuccessful)
 
 	ctx.Step(`^this category-dimension-import event is consumed:$`, c.thisCategoryDimensionImportEventIsConsumed)
 	ctx.Step(`^these instance-complete events are produced:$`, c.theseDimensionCompleteEventsAreProduced)
@@ -102,10 +102,9 @@ func (c *Component) theCallToAddInstanceDimensionIsSuccessful(id string) error {
 
 // theCallToUpdateInstanceIsSuccessful generates a mocked response for Dataset API
 // PUT /instances/{id}
-func (c *Component) theCallToUpdateInstanceIsSuccessful(id string, state string) error {
+func (c *Component) theCallToUpdateInstanceIsSuccessful(id string) error {
 	c.DatasetAPI.NewHandler().
 		Put("/instances/"+id).
-		// AssertBody([]byte{}). // TODO assert body contains expected state
 		Reply(http.StatusOK).
 		AddHeader("ETag", testETag)
 
@@ -114,10 +113,9 @@ func (c *Component) theCallToUpdateInstanceIsSuccessful(id string, state string)
 
 // theCallToUpdateJobIsSuccessful generates a mocked response for Import API
 // PUT /jobs/{id}
-func (c *Component) theCallToUpdateJobIsSuccessful(id string, state string) error {
+func (c *Component) theCallToUpdateJobIsSuccessful(id string) error {
 	c.ImportAPI.NewHandler().
 		Put("/jobs/" + id).
-		// AssertBody([]byte{}). // TODO assert body contains expected state
 		Reply(http.StatusOK)
 
 	return nil
