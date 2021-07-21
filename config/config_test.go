@@ -35,7 +35,7 @@ func TestConfig(t *testing.T) {
 				So(cfg.CantabularURL, ShouldEqual, "http://localhost:8491")
 				So(cfg.ImportAPIURL, ShouldEqual, "http://localhost:21800")
 				So(cfg.ServiceAuthToken, ShouldEqual, "")
-				So(cfg.ComponentTestLogFile, ShouldEqual, "log-output.txt")
+				So(cfg.ComponentTestUseLogFile, ShouldBeTrue)
 			})
 
 			Convey("Then a second call to config should return the same config", func() {

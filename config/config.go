@@ -24,7 +24,7 @@ type Config struct {
 	ImportAPIURL                      string        `envconfig:"IMPORT_API_URL"`
 	CantabularURL                     string        `envconfig:"CANTABULAR_URL"`
 	ServiceAuthToken                  string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
-	ComponentTestLogFile              string        `envconfig:"COMPONENT_TEST_LOG_FILE"`
+	ComponentTestUseLogFile           bool          `envconfig:"COMPONENT_TEST_USE_LOG_FILE"`
 }
 
 var cfg *Config
@@ -53,7 +53,7 @@ func Get() (*Config, error) {
 		CantabularURL:                     "http://localhost:8491",
 		ImportAPIURL:                      "http://localhost:21800",
 		ServiceAuthToken:                  "",
-		ComponentTestLogFile:              "log-output.txt",
+		ComponentTestUseLogFile:           true,
 	}
 
 	return cfg, envconfig.Process("", cfg)

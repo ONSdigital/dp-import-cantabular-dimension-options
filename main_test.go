@@ -14,6 +14,8 @@ import (
 	"github.com/cucumber/godog/colors"
 )
 
+const componentLogFile = "component-output.txt"
+
 var componentFlag = flag.Bool("component", false, "perform component tests")
 
 type ComponentTest struct {
@@ -51,8 +53,8 @@ func TestComponent(t *testing.T) {
 
 		var output io.Writer = os.Stdout
 
-		if len(cfg.ComponentTestLogFile) > 0 {
-			logfile, err := os.Create(cfg.ComponentTestLogFile)
+		if cfg.ComponentTestUseLogFile {
+			logfile, err := os.Create(componentLogFile)
 			if err != nil {
 				t.Fatalf("could not create logs file: %s", err)
 			}
