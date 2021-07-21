@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/cucumber/godog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/rdumont/assistdog"
 )
 
@@ -56,7 +56,7 @@ func (c *Component) theInstanceHasDimensionCount(id string, totalCount string) e
 	// count must be a number
 	cnt, err := strconv.Atoi(totalCount)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// response with the provided total count
@@ -159,21 +159,11 @@ func (c *Component) theseDimensionCompleteEventsAreProduced(events *godog.Table)
 		}
 	}
 
-	if !reflect.DeepEqual(got, expected) {
-		return fmt.Errorf("\ngot:\n%s\n expected:\n%s",
-			printValues(got),
-			printValues(expected.([]*event.InstanceComplete)))
+	if diff := cmp.Diff(got, expected); diff != "" {
+		return fmt.Errorf("-got +expected)\n%s\n", diff)
 	}
 
 	return nil
-}
-
-func printValues(in []*event.InstanceComplete) string {
-	ret := "[ "
-	for _, val := range in {
-		ret += fmt.Sprintf("%+v ", val)
-	}
-	return ret + "]"
 }
 
 func (c *Component) thisCategoryDimensionImportEventIsConsumed(input *godog.DocString) error {

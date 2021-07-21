@@ -8,7 +8,6 @@ popd
 
 # Cat the component-test output file and remove it, which is stored int he project folder
 pushd dp-import-cantabular-dimension-options
-  ls -la
   cat component-output.txt && rm component-output.txt
 popd
 
