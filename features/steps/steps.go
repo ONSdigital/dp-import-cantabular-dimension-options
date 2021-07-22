@@ -56,7 +56,7 @@ func (c *Component) theInstanceHasDimensionCount(id string, totalCount string) e
 	// count must be a number
 	cnt, err := strconv.Atoi(totalCount)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to convert totalcount to integer: %w", err)
 	}
 
 	// response with the provided total count
