@@ -22,3 +22,4 @@ services:
             DATASET_API_URL:    "http://dp-dataset-api:22000"
             CANTABULAR_URL:     "http://dp-cantabular-server:8491"
             SERVICE_AUTH_TOKEN: "testToken"
+            COMPONENT_TEST_USE_LOG_FILE: "${COMPONENT_TEST_USE_LOG_FILE-false}"
