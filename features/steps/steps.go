@@ -2,87 +2,194 @@ package steps
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
-	"os/signal"
-	"syscall"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
-	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/cucumber/godog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/rdumont/assistdog"
-	"github.com/stretchr/testify/assert"
 )
 
+const testETag = "13c7791bafdbaaf5e6660754feb1a58cd6aaa892"
+
+// DimensionCompleteEventsTimeout is the maximum time that the testing producer will wait
+// for DimensionComplete events to be produced before failing the test
+var DimensionCompleteEventsTimeout = time.Second
+
+// RegisterSteps maps the human-readable regular expressions to their corresponding funcs
 func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
-	// ctx.Step(`^these hello events are consumed:$`, c.theseHelloEventsAreConsumed)
-	// ctx.Step(`^I should receive a hello-world response$`, c.iShouldReceiveAHelloworldResponse)
+	ctx.Step(`^the following instance with id "([^"]*)" is available from dp-dataset-api:$`, c.theFollowingInstanceIsAvailable)
+	ctx.Step(`^the instance with id "([^"]*)" has ([^"]*) dimension options`, c.theInstanceHasDimensionCount)
+	ctx.Step(`^the following response is available from Cantabular from the codebook "([^"]*)" and query "([^"]*)":$`, c.theFollowingCodebookIsAvailable)
+
+	ctx.Step(`^the call to add a dimension to the instance with id "([^"]*)" is successful`, c.theCallToAddInstanceDimensionIsSuccessful)
+	ctx.Step(`^the instance with id "([^"]*)" is successfully updated`, c.theCallToUpdateInstanceIsSuccessful)
+	ctx.Step(`^the job with id "([^"]*)" is successfully updated`, c.theCallToUpdateJobIsSuccessful)
+
+	ctx.Step(`^this category-dimension-import event is consumed:$`, c.thisCategoryDimensionImportEventIsConsumed)
+	ctx.Step(`^these instance-complete events are produced:$`, c.theseDimensionCompleteEventsAreProduced)
 }
 
-func (c *Component) iShouldReceiveAHelloworldResponse() error {
-	content, err := ioutil.ReadFile(c.cfg.OutputFilePath)
-	if err != nil {
-		return err
-	}
+// theFollowingInstanceIsAvailable generate a mocked response for dataset API
+// GET /instances/{id} with the provided instance response
+func (c *Component) theFollowingInstanceIsAvailable(id string, instance *godog.DocString) error {
+	c.DatasetAPI.NewHandler().
+		Get("/instances/"+id).
+		Reply(http.StatusOK).
+		BodyString(instance.Content).
+		AddHeader("Etag", testETag)
 
-	assert.Equal(c, "Hello, Tim!", string(content))
-
-	return c.StepError()
+	return nil
 }
 
-func (c *Component) theseHelloEventsAreConsumed(table *godog.Table) error {
+// theInstanceHasDimensionCount generates a mocked response for dataset API
+// GET /instances/{id}/dimensions with the provided totalCount and limit=offset=0
+func (c *Component) theInstanceHasDimensionCount(id string, totalCount string) error {
 
-	observationEvents, err := c.convertToHelloEvents(table)
+	// count must be a number
+	cnt, err := strconv.Atoi(totalCount)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to convert totalcount to integer: %w", err)
 	}
 
-	signals := registerInterrupt()
+	// response with the provided total count
+	resp := fmt.Sprintf(`{
+		"items": [],
+		"count": 0,
+		"offset": 0,
+		"limit": 0,
+		"total_count": %d
+	}`, cnt)
 
-	// run application in separate goroutine
-	go func() {
-		c.svc.Start(context.Background(), c.errorChan)
-	}()
+	// create handler with the mocked response
+	c.DatasetAPI.NewHandler().
+		Get("/instances/"+id+"/dimensions").
+		Reply(http.StatusOK).
+		BodyString(resp).
+		AddHeader("Etag", testETag)
 
-	// consume extracted observations
-	for _, e := range observationEvents {
-		if err := c.sendToConsumer(e); err != nil {
-			return err
+	return nil
+}
+
+// theFollowingCodebookIsAvailable generates a mocked response for Cantabular Server
+// GET /v9/codebook/{name} with the provided query
+func (c *Component) theFollowingCodebookIsAvailable(name, q string, cb *godog.DocString) error {
+	c.CantabularSrv.NewHandler().
+		Get("/v9/codebook/" + name + q).
+		Reply(http.StatusOK).
+		BodyString(cb.Content)
+
+	return nil
+}
+
+// theCallToAddInstanceDimensionIsSuccessful generates a mocked response for Dataset API
+// POST /instances/{id}/dimensions
+func (c *Component) theCallToAddInstanceDimensionIsSuccessful(id string) error {
+	c.DatasetAPI.NewHandler().
+		Post("/instances/"+id+"/dimensions").
+		Reply(http.StatusOK).
+		AddHeader("ETag", testETag)
+
+	return nil
+}
+
+// theCallToUpdateInstanceIsSuccessful generates a mocked response for Dataset API
+// PUT /instances/{id}
+func (c *Component) theCallToUpdateInstanceIsSuccessful(id string) error {
+	c.DatasetAPI.NewHandler().
+		Put("/instances/"+id).
+		Reply(http.StatusOK).
+		AddHeader("ETag", testETag)
+
+	return nil
+}
+
+// theCallToUpdateJobIsSuccessful generates a mocked response for Import API
+// PUT /jobs/{id}
+func (c *Component) theCallToUpdateJobIsSuccessful(id string) error {
+	c.ImportAPI.NewHandler().
+		Put("/jobs/" + id).
+		Reply(http.StatusOK)
+
+	return nil
+}
+
+// theseDimensionCompleteEventsAreProduced consumes kafka messages that are expected to be produced by the service under test
+// and validates that they match the expected values in the test
+func (c *Component) theseDimensionCompleteEventsAreProduced(events *godog.Table) error {
+	expected, err := assistdog.NewDefault().CreateSlice(new(event.InstanceComplete), events)
+	if err != nil {
+		return fmt.Errorf("failed to create slice from godog table: %w", err)
+	}
+
+	var got []*event.InstanceComplete
+	listen := true
+
+	for listen {
+		select {
+		case <-time.After(DimensionCompleteEventsTimeout):
+			listen = false
+		case <-c.consumer.Channels().Closer:
+			return errors.New("closer channel closed")
+		case msg, ok := <-c.consumer.Channels().Upstream:
+			if !ok {
+				return errors.New("upstream channel closed")
+			}
+
+			var e event.InstanceComplete
+			var s = schema.InstanceComplete
+
+			if err := s.Unmarshal(msg.GetData(), &e); err != nil {
+				msg.Commit()
+				msg.Release()
+				return fmt.Errorf("error unmarshalling message: %w", err)
+			}
+
+			msg.Commit()
+			msg.Release()
+
+			got = append(got, &e)
 		}
 	}
 
-	time.Sleep(300 * time.Millisecond)
-
-	// kill application
-	signals <- os.Interrupt
+	if diff := cmp.Diff(got, expected); diff != "" {
+		return fmt.Errorf("-got +expected)\n%s\n", diff)
+	}
 
 	return nil
 }
 
-func (c *Component) convertToHelloEvents(table *godog.Table) ([]*event.CategoryDimensionImport, error) {
-	assist := assistdog.NewDefault()
-	events, err := assist.CreateSlice(&event.CategoryDimensionImport{}, table)
-	if err != nil {
-		return nil, err
-	}
-	return events.([]*event.CategoryDimensionImport), nil
-}
+func (c *Component) thisCategoryDimensionImportEventIsConsumed(input *godog.DocString) error {
+	ctx := context.Background()
 
-func (c *Component) sendToConsumer(e *event.CategoryDimensionImport) error {
-	bytes, err := schema.CategoryDimensionImport.Marshal(e)
-	if err != nil {
-		return err
+	// testing kafka message that will be produced
+	var testEvent event.CategoryDimensionImport
+	if err := json.Unmarshal([]byte(input.Content), &testEvent); err != nil {
+		return fmt.Errorf("error unmarshaling input to event: %w body: %s", err, input.Content)
 	}
 
-	c.KafkaConsumer.Channels().Upstream <- kafkatest.NewMessage(bytes, 0)
+	log.Info(ctx, "event to marshal: ", log.Data{
+		"event": testEvent,
+	})
+
+	// marshal and send message
+	b, err := schema.CategoryDimensionImport.Marshal(testEvent)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event from schema: %w", err)
+	}
+
+	log.Info(ctx, "marshalled event: ", log.Data{
+		"event": b,
+	})
+
+	c.producer.Channels().Output <- b
+
 	return nil
-
-}
-
-func registerInterrupt() chan os.Signal {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-	return signals
 }

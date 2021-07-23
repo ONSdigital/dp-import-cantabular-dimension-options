@@ -16,6 +16,18 @@ var categoryDimensionImport = `{
   ]
 }`
 
+var instanceComplete = `{
+  "type": "record",
+  "name": "cantabular-dataset-instance-complete",
+  "fields": [
+    {"name": "instance_id", "type": "string"}
+  ]
+}`
+
 var CategoryDimensionImport = &avro.Schema{
 	Definition: categoryDimensionImport,
+}
+
+var InstanceComplete = &avro.Schema{
+	Definition: instanceComplete,
 }

@@ -44,4 +44,5 @@ convey:
 
 .PHONY: test-component
 test-component:
-	go test -cover -coverpkg=github.com/ONSdigital/dp-import-cantabular-dimension-options/... -component
+	cd features/compose; docker compose up --abort-on-container-exit
+	echo "please ignore error codes 0, like so: ERRO[xxxx] 0, as error code 0 means that there was no error"

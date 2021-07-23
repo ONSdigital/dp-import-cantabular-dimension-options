@@ -5,13 +5,18 @@ package mock
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-api-clients-go/cantabular"
+	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
+	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler"
 	"sync"
 )
 
 var (
 	lockCantabularClientMockGetCodebook sync.RWMutex
 )
+
+// Ensure, that CantabularClientMock does implement handler.CantabularClient.
+// If this is not the case, regenerate this file with moq.
+var _ handler.CantabularClient = &CantabularClientMock{}
 
 // CantabularClientMock is a mock implementation of handler.CantabularClient.
 //
