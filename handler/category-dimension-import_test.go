@@ -394,18 +394,13 @@ func TestHandleFailure(t *testing.T) {
 				return testETag, nil
 			},
 		}
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, nil, nil)
+		importAPIClient := importAPIClientWithUpdateState()
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the wrapped error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
 			So(err, ShouldResemble, fmt.Errorf("error getting cantabular codebook: %w", errCantabular))
-
-			Convey("Then the instance is set to failed state in dataset API", func() {
-				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].IfMatch, ShouldEqual, headers.IfMatchAnyETag)
-			})
+			validateFailed(datasetAPIClient, importAPIClient)
 		})
 
 		Convey("And dataset API fails to set the instance state", func() {
@@ -423,12 +418,7 @@ func TestHandleFailure(t *testing.T) {
 					},
 				))
 
-				Convey("Then the handler tires to set the instance to failed state in dataset API", func() {
-					So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].IfMatch, ShouldEqual, headers.IfMatchAnyETag)
-				})
+				validateFailed(datasetAPIClient, importAPIClient)
 			})
 		})
 	})
@@ -447,7 +437,8 @@ func TestHandleFailure(t *testing.T) {
 				return testETag, nil
 			},
 		}
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, nil, nil)
+		importAPIClient := importAPIClientWithUpdateState()
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the expected validation error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -460,13 +451,7 @@ func TestHandleFailure(t *testing.T) {
 					},
 				}),
 			)
-
-			Convey("Then the instance is set to failed state in dataset API", func() {
-				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].IfMatch, ShouldEqual, headers.IfMatchAnyETag)
-			})
+			validateFailed(datasetAPIClient, importAPIClient)
 		})
 	})
 
@@ -480,7 +465,8 @@ func TestHandleFailure(t *testing.T) {
 				return "", nil
 			},
 		}
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, nil, nil)
+		importAPIClient := importAPIClientWithUpdateState()
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -489,11 +475,7 @@ func TestHandleFailure(t *testing.T) {
 				So(err, ShouldResemble, fmt.Errorf("error getting instance from dataset-api: %w", errDataset))
 			})
 
-			Convey("Then the instance state is set to failed", func() {
-				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-			})
+			validateFailed(datasetAPIClient, importAPIClient)
 		})
 	})
 
@@ -527,11 +509,7 @@ func TestHandleFailure(t *testing.T) {
 					So(err, ShouldResemble, fmt.Errorf("error posting instance dimension option: %w", errPostInstance))
 				})
 
-				Convey("Then the instance state is set to failed", func() {
-					So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-				})
+				validateFailed(datasetAPIClient, importAPIClient)
 			})
 		})
 
@@ -549,11 +527,7 @@ func TestHandleFailure(t *testing.T) {
 					So(err, ShouldResemble, fmt.Errorf("error posting instance dimension option: %w", errPostInstance))
 				})
 
-				Convey("Then the instance state is set to failed", func() {
-					So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-				})
+				validateFailed(datasetAPIClient, importAPIClient)
 			})
 		})
 
@@ -629,11 +603,7 @@ func TestHandleFailure(t *testing.T) {
 					So(sleepRandomCalls, ShouldResemble, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
 				})
 
-				Convey("Then the instance state is set to failed", func() {
-					So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-					So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-				})
+				validateFailed(datasetAPIClient, importAPIClient)
 			})
 		})
 	})
@@ -650,8 +620,14 @@ func TestHandleFailure(t *testing.T) {
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
 			So(err, ShouldResemble, handler.NewError(
-				fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errDataset),
-				log.Data{"event": &testEvent},
+				fmt.Errorf("error updating instance state during error handling: %w", errDataset),
+				log.Data{
+					"event": &testEvent,
+					"original_error": handler.NewError(
+						fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errDataset),
+						log.Data{"event": &testEvent},
+					),
+				},
 			))
 		})
 	})
@@ -666,6 +642,9 @@ func TestHandleFailure(t *testing.T) {
 			IncreaseProcessedInstanceCountFunc: func(ctx context.Context, jobID string, serviceToken string, instanceID string) ([]importapi.ProcessedInstances, error) {
 				return nil, errImportAPI
 			},
+			UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
+				return nil
+			},
 		}
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
 
@@ -676,11 +655,7 @@ func TestHandleFailure(t *testing.T) {
 				So(err, ShouldResemble, fmt.Errorf("error increasing and counting instance count in import api: %w", errImportAPI))
 			})
 
-			Convey("Then the instance state is set to failed", func() {
-				So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
-			})
+			validateFailed(datasetAPIClient, importAPIClient)
 		})
 	})
 
@@ -713,6 +688,22 @@ func TestHandleFailure(t *testing.T) {
 				So(sentBytes, ShouldResemble, expectedBytes)
 			})
 		})
+	})
+}
+
+func validateFailed(datasetAPIClient mock.DatasetAPIClientMock, importAPIClient mock.ImportAPIClientMock) {
+
+	Convey("Then the instance is set to failed state in dataset API", func() {
+		So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
+		So(datasetAPIClient.PutInstanceStateCalls()[0].InstanceID, ShouldEqual, testInstanceID)
+		So(datasetAPIClient.PutInstanceStateCalls()[0].State, ShouldEqual, dataset.StateFailed)
+		So(datasetAPIClient.PutInstanceStateCalls()[0].IfMatch, ShouldEqual, headers.IfMatchAnyETag)
+	})
+
+	Convey("Then the import job is set to failed state in import API", func() {
+		So(importAPIClient.UpdateImportJobStateCalls(), ShouldHaveLength, 1)
+		So(importAPIClient.UpdateImportJobStateCalls()[0].JobID, ShouldEqual, testJobID)
+		So(importAPIClient.UpdateImportJobStateCalls()[0].NewState, ShouldEqual, handler.StateImportFailed)
 	})
 }
 
@@ -820,17 +811,20 @@ func importAPIClientHappy(isLastInstanceDimension, isLastImportDimension bool) m
 		procInst[1].ProcessedCount = 5
 	}
 
-	m := mock.ImportAPIClientMock{
+	return mock.ImportAPIClientMock{
 		IncreaseProcessedInstanceCountFunc: func(ctx context.Context, jobID string, serviceToken string, instanceID string) ([]importapi.ProcessedInstances, error) {
 			return procInst, nil
 		},
-	}
-
-	if isLastImportDimension {
-		m.UpdateImportJobStateFunc = func(ctx context.Context, jobID string, serviceToken string, newState string) error {
+		UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
 			return nil
-		}
+		},
 	}
+}
 
-	return m
+func importAPIClientWithUpdateState() mock.ImportAPIClientMock {
+	return mock.ImportAPIClientMock{
+		UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
+			return nil
+		},
+	}
 }
