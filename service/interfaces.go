@@ -6,6 +6,7 @@ import (
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
 	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
+	"github.com/ONSdigital/dp-api-clients-go/v2/importapi"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 )
 
@@ -47,5 +48,6 @@ type DatasetAPIClient interface {
 // ImportAPIClient defines the required Import API methods
 type ImportAPIClient interface {
 	UpdateImportJobState(ctx context.Context, jobID, serviceToken string, newState string) error
+	IncreaseProcessedInstanceCount(ctx context.Context, jobID, serviceToken, instanceID string) (procInst []importapi.ProcessedInstances, err error)
 	Checker(context.Context, *healthcheck.CheckState) error
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
 	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
 	"github.com/ONSdigital/dp-api-clients-go/v2/headers"
+	"github.com/ONSdigital/dp-api-clients-go/v2/importapi"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
@@ -111,7 +112,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimension options), similar to what we did in Filter API.
 	attempt := 0
 	for i := 0; i < variable.Len; i++ {
-		_, err := h.datasets.PostInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.OptionPost{
+		eTag, err = h.datasets.PostInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.OptionPost{
 			Name:     variable.Name,
 			CodeList: variable.Name,     // TODO can we assume this?
 			Code:     variable.Codes[i], // TODO can we assume this?
@@ -162,18 +163,25 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		"dimension": e.DimensionID,
 	})
 
-	// Count the total number of dimension options for this instance
-	dims, newETag, err := h.datasets.GetInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, &dataset.QueryParams{Limit: 0}, headers.IfMatchAnyETag)
+	// Increase the import job with the instance counter and check if this was the last dimension for the instance
+	procInst, err := h.importApi.IncreaseProcessedInstanceCount(ctx, e.JobID, h.cfg.ServiceAuthToken, e.InstanceID)
 	if err != nil {
 		// TODO we might want to retry this, once retries are implemented
-		return h.instanceFailed(ctx, fmt.Errorf("error counting instance dimensions: %w", err), e)
+		return h.instanceFailed(ctx, fmt.Errorf("error increasing and counting instance count in import api: %w", err), e)
 	}
 
-	// if all dimension options have been added to the instance and the instance did not change between the last update and the count,
-	// then we might need to change states and trigger a kafka message
-	if newETag == eTag && dims.TotalCount == resp.Dataset.Size {
+	instanceLastDimension, importComplete := IsComplete(procInst, e.InstanceID)
+
+	if instanceLastDimension {
+		// set instance state to edition-confirmed and send kafka message
 		if err = h.onLastDimension(ctx, e, eTag); err != nil {
 			return err
+		}
+	}
+	if importComplete {
+		// Import api update job to completed state
+		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
+			return fmt.Errorf("error updating import job to completed state: %w", err)
 		}
 	}
 
@@ -191,40 +199,34 @@ func (h *CategoryDimensionImport) instanceFailed(ctx context.Context, err error,
 	return err
 }
 
-// onLastDimension handles the case where all dimensions have been updated to the instance.
-// If the eTag did not change since the last update, then we know that this consumer was the last one to update the instance. In that case:
+// IsComplete checks if the instance is complete and if all instances in import process are complete
+func IsComplete(procInst []importapi.ProcessedInstances, instanceID string) (instanceLastDimension, importComplete bool) {
+	importComplete = true
+	instanceLastDimension = false
+	for _, instCount := range procInst {
+		if instCount.ProcessedCount != instCount.RequiredCount {
+			importComplete = false
+		} else {
+			if instCount.ID == instanceID {
+				instanceLastDimension = true
+			}
+		}
+	}
+	return instanceLastDimension, importComplete
+}
+
+// onLastDimension handles the case where all dimensions have been updated to the instance. The following actions will happen:
 // - Set instance to edition-confirmed
-// - Set import job to completed state
 // - send an InstanceComplete kafka message
 func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.CategoryDimensionImport, eTag string) error {
 
 	// set instance to 'edition-confirmed' state, only if the eTag value did not change
-	newETag, err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateEditionConfirmed, eTag)
+	_, err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateEditionConfirmed, eTag)
 	if err != nil {
-		switch putErr := err.(type) {
-		case *dataset.ErrInvalidDatasetAPIResponse:
-			// ErrInvalidDatasetAPIResponse covers the case where the dataset API responded with an unexpected Status Code.
-			// If the status code was 409 Conflict, then it means that the instance changed since the last call.
-			if putErr.Code() == http.StatusConflict {
-				log.Info(ctx, "instance state could not be set to 'edition-confirmed' because the eTag value changed between posting the last dimension option and counting the number of dimension options. This is a valid scenario, another consumer was the last one to update the instance, and it will be responsibe of updating the instance and import job states, and sending the kafka message",
-					log.Data{
-						"event":    e,
-						"old_etag": eTag,
-						"new_etag": newETag,
-					})
-				return nil
-			}
-		}
-		// for generic errors or any other unexpected status code, we return an error.
 		return &Error{
 			err:     fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", err),
 			logData: log.Data{"event": e},
 		}
-	}
-
-	// Import api update job to completed state
-	if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
-		return fmt.Errorf("error updating import job to completed state: %w", err)
 	}
 
 	// create InstanceComplete event and Marshal it
