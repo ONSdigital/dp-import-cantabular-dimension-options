@@ -26,7 +26,7 @@ var DimensionCompleteEventsTimeout = time.Second
 // RegisterSteps maps the human-readable regular expressions to their corresponding funcs
 func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the following instance with id "([^"]*)" is available from dp-dataset-api:$`, c.theFollowingInstanceIsAvailable)
-	ctx.Step(`^the instance with id "([^"]*)" has ([^"]*) dimension options`, c.theInstanceHasDimensionCount)
+	ctx.Step(`^([^"]*) out of ([^"]*) dimensions have been processed for instance "([^"]*)" and job "([^"]*)"`, c.theCallToIncreaseProcessedInstanceIsSuccessful)
 	ctx.Step(`^the following response is available from Cantabular from the codebook "([^"]*)" and query "([^"]*)":$`, c.theFollowingCodebookIsAvailable)
 
 	ctx.Step(`^the call to add a dimension to the instance with id "([^"]*)" is successful`, c.theCallToAddInstanceDimensionIsSuccessful)
@@ -44,35 +44,6 @@ func (c *Component) theFollowingInstanceIsAvailable(id string, instance *godog.D
 		Get("/instances/"+id).
 		Reply(http.StatusOK).
 		BodyString(instance.Content).
-		AddHeader("Etag", testETag)
-
-	return nil
-}
-
-// theInstanceHasDimensionCount generates a mocked response for dataset API
-// GET /instances/{id}/dimensions with the provided totalCount and limit=offset=0
-func (c *Component) theInstanceHasDimensionCount(id string, totalCount string) error {
-
-	// count must be a number
-	cnt, err := strconv.Atoi(totalCount)
-	if err != nil {
-		return fmt.Errorf("failed to convert totalcount to integer: %w", err)
-	}
-
-	// response with the provided total count
-	resp := fmt.Sprintf(`{
-		"items": [],
-		"count": 0,
-		"offset": 0,
-		"limit": 0,
-		"total_count": %d
-	}`, cnt)
-
-	// create handler with the mocked response
-	c.DatasetAPI.NewHandler().
-		Get("/instances/"+id+"/dimensions").
-		Reply(http.StatusOK).
-		BodyString(resp).
 		AddHeader("Etag", testETag)
 
 	return nil
@@ -117,6 +88,38 @@ func (c *Component) theCallToUpdateJobIsSuccessful(id string) error {
 	c.ImportAPI.NewHandler().
 		Put("/jobs/" + id).
 		Reply(http.StatusOK)
+
+	return nil
+}
+
+// theCallToIncreaseProcessedInstanceIsSuccessful generates a mocked response from Import API
+// PUT /jobs/{jobID}/processed/{instanceID}
+func (c *Component) theCallToIncreaseProcessedInstanceIsSuccessful(processed, required, instanceID, jobID string) error {
+
+	// counts must be numbers
+	processedCount, err := strconv.Atoi(processed)
+	if err != nil {
+		return fmt.Errorf("failed to convert processed to integer: %w", err)
+	}
+	requiredCount, err := strconv.Atoi(required)
+	if err != nil {
+		return fmt.Errorf("failed to convert required to integer: %w", err)
+	}
+
+	// response with the provided instance ID and counts
+	resp := fmt.Sprintf(`[
+		{
+			"id": "%s",
+			"required_count": %d,
+			"processed_count": %d
+		}
+	]`, instanceID, processedCount, requiredCount)
+
+	// create handler with the mocked response
+	c.ImportAPI.NewHandler().
+		Put(fmt.Sprintf("/jobs/%s/processed/%s", jobID, instanceID)).
+		Reply(http.StatusOK).
+		BodyString(resp)
 
 	return nil
 }

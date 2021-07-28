@@ -62,7 +62,7 @@ func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *e
 	if err != nil {
 		// set instance state to failed because it could not be obtained and the import process will be aborted.
 		// TODO we might want to retry this, once retries are implemented
-		return i, "", h.failed(ctx, fmt.Errorf("error getting instance from dataset-api: %w", err), e)
+		return i, "", h.setImportToFailed(ctx, fmt.Errorf("error getting instance from dataset-api: %w", err), e)
 	}
 
 	// validate that instance is in 'completed' state
@@ -99,14 +99,14 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	if err != nil {
 		// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.
 		// TODO we might want to retry this, once retries are implemented
-		return h.failed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
+		return h.setImportToFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
 	}
 
 	// validate that there is exactly one Codebook in the response
 	if resp == nil || resp.Codebook == nil || len(resp.Codebook) != 1 {
 		err := NewError(errors.New("unexpected response from Cantabular server"), log.Data{"response": resp})
 		// set instance state to failed because cantabular response is invalid and the import process will be aborted.
-		return h.failed(ctx, err, e)
+		return h.setImportToFailed(ctx, err, e)
 	}
 
 	variable := resp.Codebook[0]
@@ -131,7 +131,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 					// check if we have already attemtped to post the instance more than MaxConflictRetries times
 					if attempt >= MaxConflictRetries {
-						return h.failed(ctx, fmt.Errorf("aborting import process after %d retries resulting in conflict on post dimension", MaxConflictRetries), e)
+						return h.setImportToFailed(ctx, fmt.Errorf("aborting import process after %d retries resulting in conflict on post dimension", MaxConflictRetries), e)
 					}
 
 					// sleep an exponential random time before retrying
@@ -150,11 +150,11 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 				} else {
 					// any other unexpected status code results in the import process failing
-					return h.failed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
+					return h.setImportToFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
 				}
 			default:
 				// any other error type results in the import process failing
-				return h.failed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
+				return h.setImportToFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
 			}
 		}
 		attempt = 0
@@ -170,7 +170,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	procInst, err := h.importApi.IncreaseProcessedInstanceCount(ctx, e.JobID, h.cfg.ServiceAuthToken, e.InstanceID)
 	if err != nil {
 		// TODO we might want to retry this, once retries are implemented
-		return h.failed(ctx, fmt.Errorf("error increasing and counting instance count in import api: %w", err), e)
+		return h.setImportToFailed(ctx, fmt.Errorf("error increasing and counting instance count in import api: %w", err), e)
 	}
 
 	instanceLastDimension, importComplete := IsComplete(procInst, e.InstanceID)
@@ -178,7 +178,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	if instanceLastDimension {
 		// set instance state to edition-confirmed and send kafka message
 		if err = h.onLastDimension(ctx, e, eTag); err != nil {
-			return h.failed(ctx, err, e)
+			return h.setImportToFailed(ctx, err, e)
 		}
 	}
 	if importComplete {
@@ -191,8 +191,8 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	return nil
 }
 
-// failed updates the instance and the import states to 'failed' and returns an Error wrapping the original error and any error during the state update
-func (h *CategoryDimensionImport) failed(ctx context.Context, err error, e *event.CategoryDimensionImport) error {
+// setImportToFailed updates the instance and the import states to 'failed' and returns an Error wrapping the original error and any other error during the state update calls
+func (h *CategoryDimensionImport) setImportToFailed(ctx context.Context, err error, e *event.CategoryDimensionImport) error {
 
 	// Set instance and import states to failed
 	_, err1 := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag)
