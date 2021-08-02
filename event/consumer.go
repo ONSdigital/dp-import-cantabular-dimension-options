@@ -69,6 +69,5 @@ func processMessage(ctx context.Context, msg kafka.Message, h Handler) error {
 		return fmt.Errorf("failed to handle event: %w", err)
 	}
 
-	log.Info(ctx, "event processed - committing message", log.Data{"event": e})
 	return nil
 }
