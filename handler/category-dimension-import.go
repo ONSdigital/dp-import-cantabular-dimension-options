@@ -180,12 +180,14 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		if err = h.onLastDimension(ctx, e, eTag); err != nil {
 			return h.setImportToFailed(ctx, err, e)
 		}
+		log.Info(ctx, "instance has been completely processed and kafka message has been sent", log.Data{"event": e})
 	}
 	if importComplete {
 		// Import api update job to completed state
 		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
 			return fmt.Errorf("error updating import job to completed state: %w", err)
 		}
+		log.Info(ctx, "all instances for the import have been successfully processed and the job has been set to completed state", log.Data{"event": e})
 	}
 
 	return nil
