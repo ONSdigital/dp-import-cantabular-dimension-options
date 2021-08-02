@@ -173,6 +173,8 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		return h.setImportToFailed(ctx, fmt.Errorf("error increasing and counting instance count in import api: %w", err), e)
 	}
 
+	log.Info(ctx, "event processed (all dimensions for instance processed)- message will be committed by caller", log.Data{"event": e})
+
 	instanceLastDimension, importComplete := IsComplete(procInst, e.InstanceID)
 
 	if instanceLastDimension {
@@ -180,7 +182,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		if err = h.onLastDimension(ctx, e, eTag); err != nil {
 			return h.setImportToFailed(ctx, err, e)
 		}
-		log.Info(ctx, "instance has been completely processed and kafka message has been sent", log.Data{"event": e})
+		log.Info(ctx, "all dimensions in instance have been completely processed and kafka message has been sent", log.Data{"event": e})
 	}
 	if importComplete {
 		// Import api update job to completed state
