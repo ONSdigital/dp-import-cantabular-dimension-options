@@ -79,10 +79,6 @@ func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *e
 // Handle calls Cantabular server to obtain a list of variables for a CantabularBlob,
 // which are then posted to the dataset API as dimension options
 func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryDimensionImport) error {
-	logData := log.Data{
-		"event": e,
-	}
-	log.Info(ctx, "event handler called", logData)
 
 	// get instance state and check that it is in completed state
 	_, eTag, err := h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
@@ -160,9 +156,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		attempt = 0
 	}
 
-	log.Info(ctx, "successfully posted all dimension options to dataset api", log.Data{
-		"codes":     variable.Codes,
-		"labels":    variable.Labels,
+	log.Info(ctx, "successfully posted all dimension options to dataset api for a dimension", log.Data{
 		"dimension": e.DimensionID,
 	})
 
