@@ -611,7 +611,7 @@ func TestHandleFailure(t *testing.T) {
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(true, false)
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
-			return "", errDataset
+			return "", fmt.Errorf("dataset api failed to set instance to %s state", state)
 		}
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
 
@@ -619,10 +619,10 @@ func TestHandleFailure(t *testing.T) {
 			err := eventHandler.Handle(ctx, &testEvent)
 			So(err, ShouldResemble, handler.NewError(
 				handler.NewError(
-					fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errDataset),
+					fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errors.New("dataset api failed to set instance to edition-confirmed state")),
 					log.Data{"event": &testEvent}),
 				log.Data{
-					"additional_errors": []error{errDataset},
+					"additional_errors": []error{errors.New("dataset api failed to set instance to failed state")},
 				},
 			))
 		})
