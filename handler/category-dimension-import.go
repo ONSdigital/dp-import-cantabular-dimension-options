@@ -191,22 +191,20 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 // setImportToFailed updates the instance and the import states to 'failed' and returns an Error wrapping the original error and any other error during the state update calls
 func (h *CategoryDimensionImport) setImportToFailed(ctx context.Context, err error, e *event.CategoryDimensionImport) error {
+	_, errUpdateInstance := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag)
+	errUpdateImport := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportFailed)
 
-	// Set instance and import states to failed
-	_, err1 := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag)
-	err2 := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportFailed)
-
-	// wrap any error that happened during he updates
-	if err1 != nil {
-		err = &Error{
-			err:     fmt.Errorf("error updating instance state during error handling: %w", err1),
-			logData: log.Data{"event": e, "original_error": err},
+	if errUpdateInstance != nil || errUpdateImport != nil {
+		additionalErrs := []error{}
+		if errUpdateInstance != nil {
+			additionalErrs = append(additionalErrs, errUpdateInstance)
 		}
-	}
-	if err2 != nil {
-		err = &Error{
-			err:     fmt.Errorf("error updating import state during error handling: %w", err2),
-			logData: log.Data{"event": e, "original_error": err},
+		if errUpdateImport != nil {
+			additionalErrs = append(additionalErrs, errUpdateImport)
+		}
+		return &Error{
+			err:     err,
+			logData: log.Data{"additional_errors": additionalErrs},
 		}
 	}
 
