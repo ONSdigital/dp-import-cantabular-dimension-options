@@ -56,7 +56,6 @@ func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d Dataset
 // getCompletedInstance gets an instance from Dataset API and validates that it is in completed state.
 // If the instance could not be obtained, we try to set it to 'failed' state, but if the state validation fails, we do not change the state.
 func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *event.CategoryDimensionImport, ifMatch string) (i dataset.Instance, eTag string, err error) {
-
 	// get instance
 	i, eTag, err = h.datasets.GetInstance(ctx, "", h.cfg.ServiceAuthToken, "", e.InstanceID, ifMatch)
 	if err != nil {
@@ -79,7 +78,6 @@ func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *e
 // Handle calls Cantabular server to obtain a list of variables for a CantabularBlob,
 // which are then posted to the dataset API as dimension options
 func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryDimensionImport) error {
-
 	// get instance state and check that it is in completed state
 	_, eTag, err := h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
 	if err != nil {
@@ -124,7 +122,6 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 			// If the status code was 409 Conflict, then it means that the instance changed since the last call.
 			case *dataset.ErrInvalidDatasetAPIResponse:
 				if errPost.Code() == http.StatusConflict {
-
 					// check if we have already attemtped to post the instance more than MaxConflictRetries times
 					if attempt >= MaxConflictRetries {
 						return h.setImportToFailed(ctx, fmt.Errorf("aborting import process after %d retries resulting in conflict on post dimension", MaxConflictRetries), e)
@@ -191,7 +188,6 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 // setImportToFailed updates the instance and the import states to 'failed' and returns an Error wrapping the original error and any other error during the state update calls
 func (h *CategoryDimensionImport) setImportToFailed(ctx context.Context, err error, e *event.CategoryDimensionImport) error {
-
 	// Set instance and import states to failed
 	_, err1 := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag)
 	err2 := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportFailed)
@@ -233,7 +229,6 @@ func IsComplete(procInst []importapi.ProcessedInstances, instanceID string) (ins
 // - Set instance to edition-confirmed
 // - send an InstanceComplete kafka message
 func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.CategoryDimensionImport, eTag string) error {
-
 	// set instance to 'edition-confirmed' state, only if the eTag value did not change
 	_, err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateEditionConfirmed, eTag)
 	if err != nil {
@@ -245,10 +240,11 @@ func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.
 
 	// create InstanceComplete event and Marshal it
 	bytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
-		InstanceID: e.InstanceID,
+		InstanceID:     e.InstanceID,
+		CantabularBlob: e.CantabularBlob,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
 	// Send bytes to kafka producer output channel
