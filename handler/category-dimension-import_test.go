@@ -32,12 +32,13 @@ var (
 	newETag        = "newETag"
 	testInstanceID = "test-instance-id"
 	testJobID      = "test-job-id"
+	testBlob       = "test-blob"
 	ctx            = context.Background()
 	testEvent      = event.CategoryDimensionImport{
 		InstanceID:     testInstanceID,
 		JobID:          testJobID,
 		DimensionID:    "test-variable",
-		CantabularBlob: "test-blob",
+		CantabularBlob: testBlob,
 	}
 )
 
@@ -160,6 +161,7 @@ func TestHandle(t *testing.T) {
 			Convey("Then the expected InstanceComplete event is sent to the kafka producer", func() {
 				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
 					InstanceID: testInstanceID,
+					CantabularBlob: testBlob,
 				})
 				So(err, ShouldBeNil)
 				sentBytes := <-producer.Channels().Output
@@ -210,6 +212,7 @@ func TestHandle(t *testing.T) {
 			Convey("Then the expected InstanceComplete event is sent to the kafka producer", func() {
 				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
 					InstanceID: testInstanceID,
+					CantabularBlob: testBlob,
 				})
 				So(err, ShouldBeNil)
 				sentBytes := <-producer.Channels().Output
@@ -411,13 +414,13 @@ func TestHandleFailure(t *testing.T) {
 			Convey("Then when Handle is triggered, the error with the event and nested error info is returned", func() {
 				err := eventHandler.Handle(ctx, &testEvent)
 				So(err, ShouldResemble, handler.NewError(
-					fmt.Errorf("error updating instance state during error handling: %w", errDataset),
+					fmt.Errorf("error getting cantabular codebook: %w", errCantabular),
 					log.Data{
-						"event":          &testEvent,
-						"original_error": fmt.Errorf("error getting cantabular codebook: %w", errCantabular),
-					},
-				))
-
+						"additional_errors": []error{
+							fmt.Errorf("failed to update instance: %w", errDataset),
+						},
+					}),
+				)
 				validateFailed(datasetAPIClient, importAPIClient)
 			})
 		})
@@ -613,20 +616,23 @@ func TestHandleFailure(t *testing.T) {
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(true, false)
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
-			return "", errDataset
+			return "", fmt.Errorf("dataset api failed to set instance to %s state", state)
 		}
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
 			So(err, ShouldResemble, handler.NewError(
-				fmt.Errorf("error updating instance state during error handling: %w", errDataset),
+				handler.NewError(
+					fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errors.New("dataset api failed to set instance to edition-confirmed state")),
+					log.Data{"event": &testEvent}),
 				log.Data{
-					"event": &testEvent,
-					"original_error": handler.NewError(
-						fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errDataset),
-						log.Data{"event": &testEvent},
-					),
+					"additional_errors": []error{
+						fmt.Errorf(
+							"failed to update instance: %w",
+							errors.New("dataset api failed to set instance to failed state"),
+						),
+					},
 				},
 			))
 		})
@@ -682,6 +688,7 @@ func TestHandleFailure(t *testing.T) {
 			Convey("Then the expected InstanceComplete event is sent to the kafka producer", func() {
 				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
 					InstanceID: testInstanceID,
+					CantabularBlob: testBlob,
 				})
 				So(err, ShouldBeNil)
 				sentBytes := <-producer.Channels().Output
