@@ -23,6 +23,7 @@ type Config struct {
 	DatasetAPIURL                     string        `envconfig:"DATASET_API_URL"`
 	ImportAPIURL                      string        `envconfig:"IMPORT_API_URL"`
 	CantabularURL                     string        `envconfig:"CANTABULAR_URL"`
+	CantabularHealthcheckEnabled      bool          `envconfig:"CANTABULAR_HEALTHCHECK_ENABLED"`
 	ServiceAuthToken                  string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 	ComponentTestUseLogFile           bool          `envconfig:"COMPONENT_TEST_USE_LOG_FILE"`
 }
@@ -52,6 +53,7 @@ func Get() (*Config, error) {
 		DatasetAPIURL:                     "http://localhost:22000",
 		CantabularURL:                     "http://localhost:8491",
 		ImportAPIURL:                      "http://localhost:21800",
+		CantabularHealthcheckEnabled:      false,
 		ServiceAuthToken:                  "",
 		ComponentTestUseLogFile:           false,
 	}
