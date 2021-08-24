@@ -81,36 +81,42 @@ func TestHandle(t *testing.T) {
 			})
 
 			Convey("Then one Post call is performed to Dataset API for each Cantabular variable", func() {
-				So(datasetAPIClient.PostInstanceDimensionsCalls(), ShouldHaveLength, 3)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 3)
 
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[0].Data, ShouldResemble, dataset.OptionPost{
-					Code:     "code1",
-					Option:   "code1",
-					Label:    "Code 1",
-					CodeList: "test-variable",
-					Name:     "test-variable",
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].Data, ShouldResemble, []*dataset.OptionPost{
+					{
+						Code:     "code1",
+						Option:   "code1",
+						Label:    "Code 1",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[1].Data, ShouldResemble, dataset.OptionPost{
-					Code:     "code2",
-					Option:   "code2",
-					Label:    "Code 2",
-					CodeList: "test-variable",
-					Name:     "test-variable",
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Data, ShouldResemble, []*dataset.OptionPost{
+					{
+						Code:     "code2",
+						Option:   "code2",
+						Label:    "Code 2",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[2].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[2].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[2].Data, ShouldResemble, dataset.OptionPost{
-					Code:     "code3",
-					Option:   "code3",
-					Label:    "Code 3",
-					CodeList: "test-variable",
-					Name:     "test-variable",
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].Data, ShouldResemble, []*dataset.OptionPost{
+					{
+						Code:     "code3",
+						Option:   "code3",
+						Label:    "Code 3",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 			})
 
@@ -160,7 +166,7 @@ func TestHandle(t *testing.T) {
 
 			Convey("Then the expected InstanceComplete event is sent to the kafka producer", func() {
 				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
-					InstanceID: testInstanceID,
+					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
 				})
 				So(err, ShouldBeNil)
@@ -211,7 +217,7 @@ func TestHandle(t *testing.T) {
 
 			Convey("Then the expected InstanceComplete event is sent to the kafka producer", func() {
 				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
-					InstanceID: testInstanceID,
+					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
 				})
 				So(err, ShouldBeNil)
@@ -257,8 +263,8 @@ func TestHandle(t *testing.T) {
 
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := mock.DatasetAPIClientMock{}
-		datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
-			switch len(datasetAPIClient.PostInstanceDimensionsCalls()) {
+		datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+			switch len(datasetAPIClient.PatchInstanceDimensionsCalls()) {
 			case 0, 1:
 				return testETag, nil
 			case 2:
@@ -273,7 +279,7 @@ func TestHandle(t *testing.T) {
 					State: dataset.StateCompleted.String(),
 				},
 			}
-			switch len(datasetAPIClient.PostInstanceDimensionsCalls()) {
+			switch len(datasetAPIClient.PatchInstanceDimensionsCalls()) {
 			case 0, 1:
 				return inst, testETag, nil
 			default:
@@ -305,50 +311,58 @@ func TestHandle(t *testing.T) {
 			})
 
 			Convey("Then one Post call is performed to Dataset API for each Cantabular variable, repeating the one that failed due to the eTag mismatch", func() {
-				So(datasetAPIClient.PostInstanceDimensionsCalls(), ShouldHaveLength, 4)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 4)
 
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[0].IfMatch, ShouldEqual, testETag)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[0].Data, ShouldResemble, dataset.OptionPost{
-					Code:     "code1",
-					Option:   "code1",
-					Label:    "Code 1",
-					CodeList: "test-variable",
-					Name:     "test-variable",
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].IfMatch, ShouldEqual, testETag)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].Data, ShouldResemble, []*dataset.OptionPost{
+					{
+						Code:     "code1",
+						Option:   "code1",
+						Label:    "Code 1",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[1].IfMatch, ShouldEqual, testETag)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[1].Data, ShouldResemble, dataset.OptionPost{
-					Code:     "code2",
-					Option:   "code2",
-					Label:    "Code 2",
-					CodeList: "test-variable",
-					Name:     "test-variable",
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].IfMatch, ShouldEqual, testETag)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Data, ShouldResemble, []*dataset.OptionPost{
+					{
+						Code:     "code2",
+						Option:   "code2",
+						Label:    "Code 2",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[2].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[2].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[2].IfMatch, ShouldEqual, newETag)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[2].Data, ShouldResemble, dataset.OptionPost{
-					Code:     "code2",
-					Option:   "code2",
-					Label:    "Code 2",
-					CodeList: "test-variable",
-					Name:     "test-variable",
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].IfMatch, ShouldEqual, newETag)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].Data, ShouldResemble, []*dataset.OptionPost{
+					{
+						Code:     "code2",
+						Option:   "code2",
+						Label:    "Code 2",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[3].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[3].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[3].IfMatch, ShouldEqual, newETag)
-				So(datasetAPIClient.PostInstanceDimensionsCalls()[3].Data, ShouldResemble, dataset.OptionPost{
-					Code:     "code3",
-					Option:   "code3",
-					Label:    "Code 3",
-					CodeList: "test-variable",
-					Name:     "test-variable",
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].IfMatch, ShouldEqual, newETag)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].Data, ShouldResemble, []*dataset.OptionPost{
+					{
+						Code:     "code3",
+						Option:   "code3",
+						Label:    "Code 3",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 			})
 
@@ -500,7 +514,7 @@ func TestHandleFailure(t *testing.T) {
 
 		Convey("Where dataset API returns a 500 error on PostInstanceDimensions", func() {
 			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusInternalServerError}, "uri")
-			datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
@@ -518,7 +532,7 @@ func TestHandleFailure(t *testing.T) {
 
 		Convey("Where dataset API returns a generic error on PostInstanceDimensions", func() {
 			errPostInstance := errors.New("generic Dataset API Client Error")
-			datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
@@ -536,7 +550,7 @@ func TestHandleFailure(t *testing.T) {
 
 		Convey("Where dataset API returns a Conflict error on PostInstanceDimensions and the instance has changed to state failed", func() {
 			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusConflict}, "uri")
-			datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
 			datasetAPIClient.GetInstanceFunc = func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
@@ -585,7 +599,7 @@ func TestHandleFailure(t *testing.T) {
 			}()
 
 			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusConflict}, "uri")
-			datasetAPIClient.PostInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
@@ -599,7 +613,7 @@ func TestHandleFailure(t *testing.T) {
 				})
 
 				Convey("Then the post instance dimensions is retried MaxConflictRetries times", func() {
-					So(datasetAPIClient.PostInstanceDimensionsCalls(), ShouldHaveLength, handler.MaxConflictRetries+1)
+					So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, handler.MaxConflictRetries+1)
 				})
 
 				Convey("Then the random sleep is called MaxConflictRetries times with the expected attemt values", func() {
@@ -687,7 +701,7 @@ func TestHandleFailure(t *testing.T) {
 
 			Convey("Then the expected InstanceComplete event is sent to the kafka producer", func() {
 				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
-					InstanceID: testInstanceID,
+					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
 				})
 				So(err, ShouldBeNil)
@@ -720,9 +734,11 @@ var testCodebookResp = &cantabular.GetCodebookResponse{
 	},
 	Codebook: cantabular.Codebook{
 		cantabular.Variable{
-			Name:  "test-variable",
-			Label: "Test Variable",
-			Len:   3,
+			VariableBase: cantabular.VariableBase{
+				Name:  "test-variable",
+				Label: "Test Variable",
+			},
+			Len: 3,
 			Codes: []string{
 				"code1",
 				"code2",
@@ -765,7 +781,7 @@ func cantabularInvalidResponse() mock.CantabularClientMock {
 
 func datasetAPIClientHappy() mock.DatasetAPIClientMock {
 	return mock.DatasetAPIClientMock{
-		PostInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
+		PatchInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
 			return testETag, nil
 		},
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
@@ -780,7 +796,7 @@ func datasetAPIClientHappy() mock.DatasetAPIClientMock {
 
 func datasetAPIClientHappyLastDimension() mock.DatasetAPIClientMock {
 	return mock.DatasetAPIClientMock{
-		PostInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
+		PatchInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
 			return testETag, nil
 		},
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {

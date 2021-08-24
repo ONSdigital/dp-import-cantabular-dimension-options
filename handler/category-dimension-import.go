@@ -109,12 +109,14 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimension options), similar to what we did in Filter API.
 	attempt := 0
 	for i := 0; i < variable.Len; i++ {
-		eTag, err = h.datasets.PostInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.OptionPost{
-			Name:     variable.Name,
-			CodeList: variable.Name,     // TODO can we assume this?
-			Code:     variable.Codes[i], // TODO can we assume this?
-			Option:   variable.Codes[i],
-			Label:    variable.Labels[i],
+		eTag, err = h.datasets.PatchInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, []*dataset.OptionPost{
+			{
+				Name:     variable.Name,
+				CodeList: variable.Name,     // TODO can we assume this?
+				Code:     variable.Codes[i], // TODO can we assume this?
+				Option:   variable.Codes[i],
+				Label:    variable.Labels[i],
+			},
 		}, eTag)
 		if err != nil {
 			switch errPost := err.(type) {

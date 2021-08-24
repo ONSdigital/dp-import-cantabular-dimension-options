@@ -85,10 +85,11 @@ var GetHealthCheck = func(cfg *config.Config, buildTime, gitCommit, version stri
 
 var GetCantabularClient = func(cfg *config.Config) CantabularClient {
 	return cantabular.NewClient(
-		dphttp.NewClient(),
 		cantabular.Config{
 			Host: cfg.CantabularURL,
 		},
+		dphttp.NewClient(),
+		nil,
 	)
 }
 
