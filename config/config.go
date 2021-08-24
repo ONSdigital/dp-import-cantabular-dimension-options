@@ -26,6 +26,7 @@ type Config struct {
 	CantabularHealthcheckEnabled      bool          `envconfig:"CANTABULAR_HEALTHCHECK_ENABLED"`
 	ServiceAuthToken                  string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 	ComponentTestUseLogFile           bool          `envconfig:"COMPONENT_TEST_USE_LOG_FILE"`
+	BatchSizeLimit                    int           `envconfig:"BATCH_SIZE_LIMIT"`
 }
 
 var cfg *Config
@@ -56,6 +57,7 @@ func Get() (*Config, error) {
 		CantabularHealthcheckEnabled:      false,
 		ServiceAuthToken:                  "",
 		ComponentTestUseLogFile:           false,
+		BatchSizeLimit:                    250, // maximum number of values sent to dataset APIs in a single patch call
 	}
 
 	return cfg, envconfig.Process("", cfg)

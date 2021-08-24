@@ -23,11 +23,14 @@ import (
 )
 
 var (
-	errCantabular  = errors.New("cantabular error")
-	errDataset     = errors.New("dataset api error")
-	errImportAPI   = errors.New("import api error")
-	testToken      = "testToken"
-	testCfg        = config.Config{ServiceAuthToken: testToken}
+	errCantabular = errors.New("cantabular error")
+	errDataset    = errors.New("dataset api error")
+	errImportAPI  = errors.New("import api error")
+	testToken     = "testToken"
+	testCfg       = config.Config{
+		ServiceAuthToken: testToken,
+		BatchSizeLimit:   2,
+	}
 	testETag       = "testETag"
 	newETag        = "newETag"
 	testInstanceID = "test-instance-id"
@@ -80,9 +83,10 @@ func TestHandle(t *testing.T) {
 				So(datasetAPIClient.GetInstanceCalls()[0].IfMatch, ShouldEqual, headers.IfMatchAnyETag)
 			})
 
-			Convey("Then one Post call is performed to Dataset API for each Cantabular variable", func() {
-				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 3)
+			Convey("Then 2 patch calls are performed to Dataset API, each containing a batch of Cantabular variable codes", func() {
+				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 2)
 
+				// First batch has the first 2 items
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].Data, ShouldResemble, []*dataset.OptionPost{
@@ -93,11 +97,6 @@ func TestHandle(t *testing.T) {
 						CodeList: "test-variable",
 						Name:     "test-variable",
 					},
-				})
-
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Data, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code2",
 						Option:   "code2",
@@ -107,9 +106,10 @@ func TestHandle(t *testing.T) {
 					},
 				})
 
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].Data, ShouldResemble, []*dataset.OptionPost{
+				// Second batch has the remaining item
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Data, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code3",
 						Option:   "code3",
@@ -311,7 +311,7 @@ func TestHandle(t *testing.T) {
 			})
 
 			Convey("Then one Post call is performed to Dataset API for each Cantabular variable, repeating the one that failed due to the eTag mismatch", func() {
-				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 4)
+				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 3)
 
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
@@ -324,6 +324,13 @@ func TestHandle(t *testing.T) {
 						CodeList: "test-variable",
 						Name:     "test-variable",
 					},
+					{
+						Code:     "code2",
+						Option:   "code2",
+						Label:    "Code 2",
+						CodeList: "test-variable",
+						Name:     "test-variable",
+					},
 				})
 
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
@@ -331,9 +338,9 @@ func TestHandle(t *testing.T) {
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].IfMatch, ShouldEqual, testETag)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Data, ShouldResemble, []*dataset.OptionPost{
 					{
-						Code:     "code2",
-						Option:   "code2",
-						Label:    "Code 2",
+						Code:     "code3",
+						Option:   "code3",
+						Label:    "Code 3",
 						CodeList: "test-variable",
 						Name:     "test-variable",
 					},
@@ -343,19 +350,6 @@ func TestHandle(t *testing.T) {
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].ServiceAuthToken, ShouldEqual, testToken)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].IfMatch, ShouldEqual, newETag)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].Data, ShouldResemble, []*dataset.OptionPost{
-					{
-						Code:     "code2",
-						Option:   "code2",
-						Label:    "Code 2",
-						CodeList: "test-variable",
-						Name:     "test-variable",
-					},
-				})
-
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].InstanceID, ShouldEqual, testInstanceID)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].IfMatch, ShouldEqual, newETag)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[3].Data, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code3",
 						Option:   "code3",
