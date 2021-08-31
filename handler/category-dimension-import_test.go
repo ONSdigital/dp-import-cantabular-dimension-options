@@ -516,18 +516,26 @@ func TestHandleFailure(t *testing.T) {
 			Convey("Then when Handle is triggered", func() {
 				err := eventHandler.Handle(ctx, &testEvent)
 
-				Convey("Then the expected error is returned", func() {
-					So(err, ShouldResemble, fmt.Errorf("error posting instance dimension option: %w", errPostInstance))
+				Convey("Then the expected wrapped error is returned", func() {
+					So(err, ShouldResemble,
+						fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w",
+							fmt.Errorf("error processing a batch of cantabular variable values as dimension options: %w",
+								fmt.Errorf("error patching instance dimensions: %w",
+									errPostInstance,
+								),
+							),
+						),
+					)
 				})
 
 				validateFailed(datasetAPIClient, importAPIClient)
 			})
 		})
 
-		Convey("Where dataset API returns a generic error on PostInstanceDimensions", func() {
-			errPostInstance := errors.New("generic Dataset API Client Error")
+		Convey("Where dataset API returns a generic error on PatchInstanceDimensions", func() {
+			errPatchInstance := errors.New("generic Dataset API Client Error")
 			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
-				return "", errPostInstance
+				return "", errPatchInstance
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
 
@@ -535,7 +543,15 @@ func TestHandleFailure(t *testing.T) {
 				err := eventHandler.Handle(ctx, &testEvent)
 
 				Convey("Then the expected error is returned", func() {
-					So(err, ShouldResemble, fmt.Errorf("error posting instance dimension option: %w", errPostInstance))
+					So(err, ShouldResemble,
+						fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w",
+							fmt.Errorf("error processing a batch of cantabular variable values as dimension options: %w",
+								fmt.Errorf("error patching instance dimensions: %w",
+									errPatchInstance,
+								),
+							),
+						),
+					)
 				})
 
 				validateFailed(datasetAPIClient, importAPIClient)
@@ -603,7 +619,13 @@ func TestHandleFailure(t *testing.T) {
 				err := eventHandler.Handle(ctx, &testEvent)
 
 				Convey("Then the expected error is returned", func() {
-					So(err, ShouldResemble, errors.New("aborting import process after 10 retries resulting in conflict on post dimension"))
+					So(err, ShouldResemble,
+						fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w",
+							fmt.Errorf("error processing a batch of cantabular variable values as dimension options: %w",
+								errors.New("aborting import process after 10 retries resulting in conflict on post dimension"),
+							),
+						),
+					)
 				})
 
 				Convey("Then the post instance dimensions is retried MaxConflictRetries times", func() {

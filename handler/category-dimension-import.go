@@ -107,7 +107,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	variable := resp.Codebook[0]
 	eTag, err = h.BatchPatchInstance(ctx, e, variable, eTag)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
 	}
 
 	log.Info(ctx, "successfully sent all dimension options to dataset api for a dimension", log.Data{
@@ -149,51 +149,49 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 	numFullChunks := variable.Len / h.cfg.BatchSizeLimit
 	remainingSize := variable.Len % h.cfg.BatchSizeLimit
 
-	// process full batches
-	for i := 0; i < numFullChunks; i++ {
-		batchOffset := i * h.cfg.BatchSizeLimit
-		optionsBatch := make([]*dataset.OptionPost, h.cfg.BatchSizeLimit)
-		for j := 0; j < h.cfg.BatchSizeLimit; j++ {
+	// processBatch is a nested func to process a batch starting at the provided offset, with the provided size
+	processBatch := func(offset, size int) {
+		optionsBatch := make([]*dataset.OptionPost, size)
+		for j := 0; j < size; j++ {
 			optionsBatch[j] = &dataset.OptionPost{
 				Name:     variable.Name,
-				CodeList: variable.Name,                 // TODO can we assume this?
-				Code:     variable.Codes[batchOffset+j], // TODO can we assume this?
-				Option:   variable.Codes[batchOffset+j],
-				Label:    variable.Labels[batchOffset+j],
+				CodeList: variable.Name,            // TODO can we assume this?
+				Code:     variable.Codes[offset+j], // TODO can we assume this?
+				Option:   variable.Codes[offset+j],
+				Label:    variable.Labels[offset+j],
 			}
 		}
-		eTag, err = h.PatchInstanceDimensionsWithRetires(ctx, e, optionsBatch, eTag, 0)
+		eTag, err = h.PatchInstanceDimensionsWithRetries(ctx, e, optionsBatch, eTag, 0)
 		if err != nil {
-			return "", err
+			err = fmt.Errorf("error processing a batch of cantabular variable values as dimension options: %w", err)
+		}
+	}
+
+	// process full batches
+	for i := 0; i < numFullChunks; i++ {
+		offset := i * h.cfg.BatchSizeLimit
+		processBatch(offset, h.cfg.BatchSizeLimit)
+		if err != nil {
+			return "", err // err was wrapped by processBatch call
 		}
 	}
 
 	// process any remaining options in a last smaller batch
 	if remainingSize > 0 {
-		batchOffset := numFullChunks * h.cfg.BatchSizeLimit
-		optionsBatch := make([]*dataset.OptionPost, remainingSize)
-		for j := 0; j < remainingSize; j++ {
-			optionsBatch[j] = &dataset.OptionPost{
-				Name:     variable.Name,
-				CodeList: variable.Name,                 // TODO can we assume this?
-				Code:     variable.Codes[batchOffset+j], // TODO can we assume this?
-				Option:   variable.Codes[batchOffset+j],
-				Label:    variable.Labels[batchOffset+j],
-			}
-		}
-		eTag, err = h.PatchInstanceDimensionsWithRetires(ctx, e, optionsBatch, eTag, 0)
+		offset := numFullChunks * h.cfg.BatchSizeLimit
+		processBatch(offset, remainingSize)
 		if err != nil {
-			return "", err
+			return "", err // err was wrapped by processBatch call
 		}
 	}
 
 	return eTag, nil
 }
 
-// PatchInstanceDimensionsWithRetires sends a patch request to dataset API with the provided options.
+// PatchInstanceDimensionsWithRetries sends a patch request to dataset API with the provided options.
 // If the eTag value changes, validate the instance state again and retry only if it is still in 'completed' state.
 // We will do up to MaxConflictRetries retires, if all of them fail, set the instance and import job to failed state
-func (h *CategoryDimensionImport) PatchInstanceDimensionsWithRetires(ctx context.Context, e *event.CategoryDimensionImport, options []*dataset.OptionPost, eTag string, attempt int) (newETag string, err error) {
+func (h *CategoryDimensionImport) PatchInstanceDimensionsWithRetries(ctx context.Context, e *event.CategoryDimensionImport, options []*dataset.OptionPost, eTag string, attempt int) (newETag string, err error) {
 	eTag, err = h.datasets.PatchInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, options, eTag)
 	if err != nil {
 		switch errPost := err.(type) {
@@ -212,19 +210,19 @@ func (h *CategoryDimensionImport) PatchInstanceDimensionsWithRetires(ctx context
 				// check that the instance is still in 'completed' state
 				_, eTag, err = h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
 				if err != nil {
-					return "", err
+					return "", fmt.Errorf("error while patching dimensions, instance may be in a wrong state: %w", err)
 				}
 
 				// instance is still in valid state and eTag has been updated. Retry to process this batch.
-				return h.PatchInstanceDimensionsWithRetires(ctx, e, options, eTag, attempt+1)
+				return h.PatchInstanceDimensionsWithRetries(ctx, e, options, eTag, attempt+1)
 
 			} else {
 				// any other unexpected status code results in the import process failing
-				return "", h.setImportToFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
+				return "", h.setImportToFailed(ctx, fmt.Errorf("error patching instance dimensions: %w", err), e)
 			}
 		default:
 			// any other error type results in the import process failing
-			return "", h.setImportToFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
+			return "", h.setImportToFailed(ctx, fmt.Errorf("error patching instance dimensions: %w", err), e)
 		}
 	}
 	return eTag, nil
