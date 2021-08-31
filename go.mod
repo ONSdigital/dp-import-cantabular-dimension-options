@@ -5,7 +5,7 @@ go 1.16
 replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.1.12-0.20210824095131-dffc09423443
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.1.12
 	github.com/ONSdigital/dp-component-test v0.3.1
 	github.com/ONSdigital/dp-healthcheck v1.0.5
 	github.com/ONSdigital/dp-import v1.2.1
