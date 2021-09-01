@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	lockDatasetAPIClientMockGetInstance            sync.RWMutex
-	lockDatasetAPIClientMockPostInstanceDimensions sync.RWMutex
-	lockDatasetAPIClientMockPutInstanceState       sync.RWMutex
+	lockDatasetAPIClientMockGetInstance             sync.RWMutex
+	lockDatasetAPIClientMockPatchInstanceDimensions sync.RWMutex
+	lockDatasetAPIClientMockPutInstanceState        sync.RWMutex
 )
 
 // Ensure, that DatasetAPIClientMock does implement handler.DatasetAPIClient.
@@ -29,8 +29,8 @@ var _ handler.DatasetAPIClient = &DatasetAPIClientMock{}
 //             GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 // 	               panic("mock out the GetInstance method")
 //             },
-//             PostInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
-// 	               panic("mock out the PostInstanceDimensions method")
+//             PatchInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+// 	               panic("mock out the PatchInstanceDimensions method")
 //             },
 //             PutInstanceStateFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 // 	               panic("mock out the PutInstanceState method")
@@ -45,8 +45,8 @@ type DatasetAPIClientMock struct {
 	// GetInstanceFunc mocks the GetInstance method.
 	GetInstanceFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error)
 
-	// PostInstanceDimensionsFunc mocks the PostInstanceDimensions method.
-	PostInstanceDimensionsFunc func(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error)
+	// PatchInstanceDimensionsFunc mocks the PatchInstanceDimensions method.
+	PatchInstanceDimensionsFunc func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error)
 
 	// PutInstanceStateFunc mocks the PutInstanceState method.
 	PutInstanceStateFunc func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error)
@@ -68,8 +68,8 @@ type DatasetAPIClientMock struct {
 			// IfMatch is the ifMatch argument value.
 			IfMatch string
 		}
-		// PostInstanceDimensions holds details about calls to the PostInstanceDimensions method.
-		PostInstanceDimensions []struct {
+		// PatchInstanceDimensions holds details about calls to the PatchInstanceDimensions method.
+		PatchInstanceDimensions []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// ServiceAuthToken is the serviceAuthToken argument value.
@@ -77,7 +77,7 @@ type DatasetAPIClientMock struct {
 			// InstanceID is the instanceID argument value.
 			InstanceID string
 			// Data is the data argument value.
-			Data dataset.OptionPost
+			Data []*dataset.OptionPost
 			// IfMatch is the ifMatch argument value.
 			IfMatch string
 		}
@@ -148,16 +148,16 @@ func (mock *DatasetAPIClientMock) GetInstanceCalls() []struct {
 	return calls
 }
 
-// PostInstanceDimensions calls PostInstanceDimensionsFunc.
-func (mock *DatasetAPIClientMock) PostInstanceDimensions(ctx context.Context, serviceAuthToken string, instanceID string, data dataset.OptionPost, ifMatch string) (string, error) {
-	if mock.PostInstanceDimensionsFunc == nil {
-		panic("DatasetAPIClientMock.PostInstanceDimensionsFunc: method is nil but DatasetAPIClient.PostInstanceDimensions was just called")
+// PatchInstanceDimensions calls PatchInstanceDimensionsFunc.
+func (mock *DatasetAPIClientMock) PatchInstanceDimensions(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+	if mock.PatchInstanceDimensionsFunc == nil {
+		panic("DatasetAPIClientMock.PatchInstanceDimensionsFunc: method is nil but DatasetAPIClient.PatchInstanceDimensions was just called")
 	}
 	callInfo := struct {
 		Ctx              context.Context
 		ServiceAuthToken string
 		InstanceID       string
-		Data             dataset.OptionPost
+		Data             []*dataset.OptionPost
 		IfMatch          string
 	}{
 		Ctx:              ctx,
@@ -166,32 +166,32 @@ func (mock *DatasetAPIClientMock) PostInstanceDimensions(ctx context.Context, se
 		Data:             data,
 		IfMatch:          ifMatch,
 	}
-	lockDatasetAPIClientMockPostInstanceDimensions.Lock()
-	mock.calls.PostInstanceDimensions = append(mock.calls.PostInstanceDimensions, callInfo)
-	lockDatasetAPIClientMockPostInstanceDimensions.Unlock()
-	return mock.PostInstanceDimensionsFunc(ctx, serviceAuthToken, instanceID, data, ifMatch)
+	lockDatasetAPIClientMockPatchInstanceDimensions.Lock()
+	mock.calls.PatchInstanceDimensions = append(mock.calls.PatchInstanceDimensions, callInfo)
+	lockDatasetAPIClientMockPatchInstanceDimensions.Unlock()
+	return mock.PatchInstanceDimensionsFunc(ctx, serviceAuthToken, instanceID, data, ifMatch)
 }
 
-// PostInstanceDimensionsCalls gets all the calls that were made to PostInstanceDimensions.
+// PatchInstanceDimensionsCalls gets all the calls that were made to PatchInstanceDimensions.
 // Check the length with:
-//     len(mockedDatasetAPIClient.PostInstanceDimensionsCalls())
-func (mock *DatasetAPIClientMock) PostInstanceDimensionsCalls() []struct {
+//     len(mockedDatasetAPIClient.PatchInstanceDimensionsCalls())
+func (mock *DatasetAPIClientMock) PatchInstanceDimensionsCalls() []struct {
 	Ctx              context.Context
 	ServiceAuthToken string
 	InstanceID       string
-	Data             dataset.OptionPost
+	Data             []*dataset.OptionPost
 	IfMatch          string
 } {
 	var calls []struct {
 		Ctx              context.Context
 		ServiceAuthToken string
 		InstanceID       string
-		Data             dataset.OptionPost
+		Data             []*dataset.OptionPost
 		IfMatch          string
 	}
-	lockDatasetAPIClientMockPostInstanceDimensions.RLock()
-	calls = mock.calls.PostInstanceDimensions
-	lockDatasetAPIClientMockPostInstanceDimensions.RUnlock()
+	lockDatasetAPIClientMockPatchInstanceDimensions.RLock()
+	calls = mock.calls.PatchInstanceDimensions
+	lockDatasetAPIClientMockPatchInstanceDimensions.RUnlock()
 	return calls
 }
 

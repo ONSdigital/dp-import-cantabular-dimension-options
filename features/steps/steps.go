@@ -64,7 +64,7 @@ func (c *Component) theFollowingCodebookIsAvailable(name, q string, cb *godog.Do
 // POST /instances/{id}/dimensions
 func (c *Component) theCallToAddInstanceDimensionIsSuccessful(id string) error {
 	c.DatasetAPI.NewHandler().
-		Post("/instances/"+id+"/dimensions").
+		Patch("/instances/"+id+"/dimensions").
 		Reply(http.StatusOK).
 		AddHeader("ETag", testETag)
 

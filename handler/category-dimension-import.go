@@ -56,7 +56,6 @@ func NewCategoryDimensionImport(cfg config.Config, c CantabularClient, d Dataset
 // getCompletedInstance gets an instance from Dataset API and validates that it is in completed state.
 // If the instance could not be obtained, we try to set it to 'failed' state, but if the state validation fails, we do not change the state.
 func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *event.CategoryDimensionImport, ifMatch string) (i dataset.Instance, eTag string, err error) {
-
 	// get instance
 	i, eTag, err = h.datasets.GetInstance(ctx, "", h.cfg.ServiceAuthToken, "", e.InstanceID, ifMatch)
 	if err != nil {
@@ -79,7 +78,6 @@ func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *e
 // Handle calls Cantabular server to obtain a list of variables for a CantabularBlob,
 // which are then posted to the dataset API as dimension options
 func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryDimensionImport) error {
-
 	// get instance state and check that it is in completed state
 	_, eTag, err := h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
 	if err != nil {
@@ -105,58 +103,14 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		return h.setImportToFailed(ctx, err, e)
 	}
 
+	// send variable values to dataset api in batches
 	variable := resp.Codebook[0]
-
-	// Post a new dimension option for each item. If the eTag value changes from one call to another, validate the instance state again, and abort if it is not 'completed'
-	// TODO we will probably need to replace this Post with a batched Patch dimension with arrays of options (for performance reasons if we have lots of dimension options), similar to what we did in Filter API.
-	attempt := 0
-	for i := 0; i < variable.Len; i++ {
-		eTag, err = h.datasets.PostInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.OptionPost{
-			Name:     variable.Name,
-			CodeList: variable.Name,     // TODO can we assume this?
-			Code:     variable.Codes[i], // TODO can we assume this?
-			Option:   variable.Codes[i],
-			Label:    variable.Labels[i],
-		}, eTag)
-		if err != nil {
-			switch errPost := err.(type) {
-			// ErrInvalidDatasetAPIResponse covers the case where the dataset API responded with an unexpected Status Code.
-			// If the status code was 409 Conflict, then it means that the instance changed since the last call.
-			case *dataset.ErrInvalidDatasetAPIResponse:
-				if errPost.Code() == http.StatusConflict {
-
-					// check if we have already attemtped to post the instance more than MaxConflictRetries times
-					if attempt >= MaxConflictRetries {
-						return h.setImportToFailed(ctx, fmt.Errorf("aborting import process after %d retries resulting in conflict on post dimension", MaxConflictRetries), e)
-					}
-
-					// sleep an exponential random time before retrying
-					SleepRandom(attempt)
-
-					// check that the instance is still in 'completed' state
-					_, eTag, err = h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
-					if err != nil {
-						return err
-					}
-
-					// instance is still in valid state and eTag has been updated. Retry this iteration
-					i--
-					attempt++
-					continue
-
-				} else {
-					// any other unexpected status code results in the import process failing
-					return h.setImportToFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
-				}
-			default:
-				// any other error type results in the import process failing
-				return h.setImportToFailed(ctx, fmt.Errorf("error posting instance dimension option: %w", err), e)
-			}
-		}
-		attempt = 0
+	eTag, err = h.BatchPatchInstance(ctx, e, variable, eTag)
+	if err != nil {
+		return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
 	}
 
-	log.Info(ctx, "successfully posted all dimension options to dataset api for a dimension", log.Data{
+	log.Info(ctx, "successfully sent all dimension options to dataset api for a dimension", log.Data{
 		"dimension": e.DimensionID,
 	})
 
@@ -189,24 +143,106 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	return nil
 }
 
-// setImportToFailed updates the instance and the import states to 'failed' and returns an Error wrapping the original error and any other error during the state update calls
-func (h *CategoryDimensionImport) setImportToFailed(ctx context.Context, err error, e *event.CategoryDimensionImport) error {
+// BatchPatchInstance sends new dimension options to Dataset API, corresponding to the provided Cantabular variable, in batches of up to BatchSizeLimit
+func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *event.CategoryDimensionImport, variable cantabular.Variable, eTag string) (newETag string, err error) {
+	// Get batch splits for provided items
+	numFullChunks := variable.Len / h.cfg.BatchSizeLimit
+	remainingSize := variable.Len % h.cfg.BatchSizeLimit
 
-	// Set instance and import states to failed
-	_, err1 := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag)
-	err2 := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportFailed)
-
-	// wrap any error that happened during he updates
-	if err1 != nil {
-		err = &Error{
-			err:     fmt.Errorf("error updating instance state during error handling: %w", err1),
-			logData: log.Data{"event": e, "original_error": err},
+	// processBatch is a nested func to process a batch starting at the provided offset, with the provided size
+	processBatch := func(offset, size int) {
+		optionsBatch := make([]*dataset.OptionPost, size)
+		for j := 0; j < size; j++ {
+			optionsBatch[j] = &dataset.OptionPost{
+				Name:     variable.Name,
+				CodeList: variable.Name,            // TODO can we assume this?
+				Code:     variable.Codes[offset+j], // TODO can we assume this?
+				Option:   variable.Codes[offset+j],
+				Label:    variable.Labels[offset+j],
+			}
+		}
+		eTag, err = h.PatchInstanceDimensionsWithRetries(ctx, e, optionsBatch, eTag, 0)
+		if err != nil {
+			err = fmt.Errorf("error processing a batch of cantabular variable values as dimension options: %w", err)
 		}
 	}
-	if err2 != nil {
-		err = &Error{
-			err:     fmt.Errorf("error updating import state during error handling: %w", err2),
-			logData: log.Data{"event": e, "original_error": err},
+
+	// process full batches
+	for i := 0; i < numFullChunks; i++ {
+		offset := i * h.cfg.BatchSizeLimit
+		processBatch(offset, h.cfg.BatchSizeLimit)
+		if err != nil {
+			return "", err // err was wrapped by processBatch call
+		}
+	}
+
+	// process any remaining options in a last smaller batch
+	if remainingSize > 0 {
+		offset := numFullChunks * h.cfg.BatchSizeLimit
+		processBatch(offset, remainingSize)
+		if err != nil {
+			return "", err // err was wrapped by processBatch call
+		}
+	}
+
+	return eTag, nil
+}
+
+// PatchInstanceDimensionsWithRetries sends a patch request to dataset API with the provided options.
+// If the eTag value changes, validate the instance state again and retry only if it is still in 'completed' state.
+// We will do up to MaxConflictRetries retires, if all of them fail, set the instance and import job to failed state
+func (h *CategoryDimensionImport) PatchInstanceDimensionsWithRetries(ctx context.Context, e *event.CategoryDimensionImport, options []*dataset.OptionPost, eTag string, attempt int) (newETag string, err error) {
+	eTag, err = h.datasets.PatchInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, options, eTag)
+	if err != nil {
+		switch errPost := err.(type) {
+		// ErrInvalidDatasetAPIResponse covers the case where the dataset API responded with an unexpected Status Code.
+		// If the status code was 409 Conflict, then it means that the instance changed since the last call.
+		case *dataset.ErrInvalidDatasetAPIResponse:
+			if errPost.Code() == http.StatusConflict {
+				// check if we have already attemtped to post the instance more than MaxConflictRetries times
+				if attempt >= MaxConflictRetries {
+					return "", h.setImportToFailed(ctx, fmt.Errorf("aborting import process after %d retries resulting in conflict on post dimension", MaxConflictRetries), e)
+				}
+
+				// sleep an exponential random time before retrying
+				SleepRandom(attempt)
+
+				// check that the instance is still in 'completed' state
+				_, eTag, err = h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
+				if err != nil {
+					return "", fmt.Errorf("error while patching dimensions, instance may be in a wrong state: %w", err)
+				}
+
+				// instance is still in valid state and eTag has been updated. Retry to process this batch.
+				return h.PatchInstanceDimensionsWithRetries(ctx, e, options, eTag, attempt+1)
+
+			} else {
+				// any other unexpected status code results in the import process failing
+				return "", h.setImportToFailed(ctx, fmt.Errorf("error patching instance dimensions: %w", err), e)
+			}
+		default:
+			// any other error type results in the import process failing
+			return "", h.setImportToFailed(ctx, fmt.Errorf("error patching instance dimensions: %w", err), e)
+		}
+	}
+	return eTag, nil
+}
+
+// setImportToFailed updates the instance and the import states to 'failed' and returns an Error wrapping the original error and any other error during the state update calls
+func (h *CategoryDimensionImport) setImportToFailed(ctx context.Context, err error, e *event.CategoryDimensionImport) error {
+	additionalErrs := []error{}
+
+	if _, errUpdateImport := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag); errUpdateImport != nil {
+		additionalErrs = append(additionalErrs, fmt.Errorf("failed to update instance: %w", errUpdateImport))
+	}
+	if errUpdateInstance := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportFailed); errUpdateInstance != nil {
+		additionalErrs = append(additionalErrs, fmt.Errorf("failed to update import job state: %w", errUpdateInstance))
+	}
+
+	if len(additionalErrs) > 0 {
+		return &Error{
+			err:     err,
+			logData: log.Data{"additional_errors": additionalErrs},
 		}
 	}
 
@@ -233,7 +269,6 @@ func IsComplete(procInst []importapi.ProcessedInstances, instanceID string) (ins
 // - Set instance to edition-confirmed
 // - send an InstanceComplete kafka message
 func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.CategoryDimensionImport, eTag string) error {
-
 	// set instance to 'edition-confirmed' state, only if the eTag value did not change
 	_, err := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateEditionConfirmed, eTag)
 	if err != nil {
@@ -245,10 +280,11 @@ func (h *CategoryDimensionImport) onLastDimension(ctx context.Context, e *event.
 
 	// create InstanceComplete event and Marshal it
 	bytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
-		InstanceID: e.InstanceID,
+		InstanceID:     e.InstanceID,
+		CantabularBlob: e.CantabularBlob,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
 	// Send bytes to kafka producer output channel

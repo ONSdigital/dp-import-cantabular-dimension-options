@@ -39,7 +39,7 @@ type CantabularClient interface {
 // DatasetAPIClient defines the required Dataset API methods
 type DatasetAPIClient interface {
 	GetInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID, ifMatch string) (m dataset.Instance, eTag string, err error)
-	PostInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, data dataset.OptionPost, ifMatch string) (eTag string, err error)
+	PatchInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, data []*dataset.OptionPost, ifMatch string) (eTag string, err error)
 	PutInstanceState(ctx context.Context, serviceAuthToken, instanceID string, state dataset.State, ifMatch string) (eTag string, err error)
 	Checker(context.Context, *healthcheck.CheckState) error
 }

@@ -75,5 +75,5 @@ Feature: Import-Cantabular-Dimension-Options
     And 2 out of 2 dimensions have been processed for instance "instance-happy-01" and job "job-happy-01"
 
     Then these instance-complete events are produced:
-      | InstanceID        |
-      | instance-happy-01 |
+      | InstanceID        | CantabularBlob |
+      | instance-happy-01 | Example        |
