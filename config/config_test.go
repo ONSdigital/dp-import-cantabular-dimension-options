@@ -37,7 +37,7 @@ func TestConfig(t *testing.T) {
 				So(cfg.CantabularHealthcheckEnabled, ShouldBeFalse)
 				So(cfg.ServiceAuthToken, ShouldEqual, "")
 				So(cfg.ComponentTestUseLogFile, ShouldBeFalse)
-				So(cfg.BatchSizeLimit, ShouldEqual, 250)
+				So(cfg.BatchSizeLimit, ShouldEqual, 100)
 			})
 
 			Convey("Then a second call to config should return the same config", func() {

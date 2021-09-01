@@ -57,7 +57,7 @@ func Get() (*Config, error) {
 		CantabularHealthcheckEnabled:      false,
 		ServiceAuthToken:                  "",
 		ComponentTestUseLogFile:           false,
-		BatchSizeLimit:                    250, // maximum number of values sent to dataset APIs in a single patch call
+		BatchSizeLimit:                    100, // maximum number of values sent to dataset APIs in a single patch call (note that this value must be lower or equal to dataset api's `MaxRequestOptions`)
 	}
 
 	return cfg, envconfig.Process("", cfg)
