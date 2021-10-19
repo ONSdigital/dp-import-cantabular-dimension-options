@@ -34,10 +34,22 @@ type Service struct {
 
 // GetKafkaConsumer returns a Kafka consumer with the provided config
 var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IConsumerGroup, error) {
-	cgChannels := dpkafka.CreateConsumerGroupChannels(1)
+	cgChannels := dpkafka.CreateConsumerGroupChannels(cfg.KafkaConfig.NumWorkers)
 	kafkaOffset := dpkafka.OffsetNewest
 	if cfg.KafkaConfig.OffsetOldest {
 		kafkaOffset = dpkafka.OffsetOldest
+	}
+	cgConfig := &kafka.ConsumerGroupConfig{
+		KafkaVersion: &cfg.KafkaConfig.Version,
+		Offset:       &kafkaOffset,
+	}
+	if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
+		cgConfig.SecurityConfig = kafka.GetSecurityConfig(
+			cfg.KafkaConfig.SecCACerts,
+			cfg.KafkaConfig.SecClientCert,
+			cfg.KafkaConfig.SecClientKey,
+			cfg.KafkaConfig.SecSkipVerify,
+		)
 	}
 	return dpkafka.NewConsumerGroup(
 		ctx,
@@ -45,24 +57,30 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IC
 		cfg.KafkaConfig.CategoryDimensionImportTopic,
 		cfg.KafkaConfig.CategoryDimensionImportGroup,
 		cgChannels,
-		&dpkafka.ConsumerGroupConfig{
-			KafkaVersion: &cfg.KafkaConfig.Version,
-			Offset:       &kafkaOffset,
-		},
+		cgConfig,
 	)
 }
 
 // GetKafkaProducer returns a kafka producer with the provided config
 var GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
+	pConfig := &kafka.ProducerConfig{
+		KafkaVersion:    &cfg.KafkaConfig.Version,
+		MaxMessageBytes: &cfg.KafkaConfig.MaxBytes,
+	}
+	if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
+		pConfig.SecurityConfig = kafka.GetSecurityConfig(
+			cfg.KafkaConfig.SecCACerts,
+			cfg.KafkaConfig.SecClientCert,
+			cfg.KafkaConfig.SecClientKey,
+			cfg.KafkaConfig.SecSkipVerify,
+		)
+	}
 	return kafka.NewProducer(
 		ctx,
 		cfg.KafkaConfig.Addr,
 		cfg.KafkaConfig.InstanceCompleteTopic,
 		kafka.CreateProducerChannels(),
-		&kafka.ProducerConfig{
-			KafkaVersion:    &cfg.KafkaConfig.Version,
-			MaxMessageBytes: &cfg.KafkaConfig.MaxBytes,
-		},
+		pConfig,
 	)
 }
 

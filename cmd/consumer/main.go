@@ -28,18 +28,27 @@ func main() {
 	}
 
 	// Create Kafka Consumer
-	cgChannels := kafka.CreateConsumerGroupChannels(1)
 	kafkaOffset := kafka.OffsetOldest
+	cgChannels := kafka.CreateConsumerGroupChannels(1)
+	cgConfig := &kafka.ConsumerGroupConfig{
+		KafkaVersion: &cfg.KafkaConfig.Version,
+		Offset:       &kafkaOffset,
+	}
+	if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
+		cgConfig.SecurityConfig = kafka.GetSecurityConfig(
+			cfg.KafkaConfig.SecCACerts,
+			cfg.KafkaConfig.SecClientCert,
+			cfg.KafkaConfig.SecClientKey,
+			cfg.KafkaConfig.SecSkipVerify,
+		)
+	}
 	kafkaConsumer, err := kafka.NewConsumerGroup(
 		ctx,
 		cfg.KafkaConfig.Addr,
 		cfg.KafkaConfig.InstanceCompleteTopic,
 		"test-consumer-group",
 		cgChannels,
-		&kafka.ConsumerGroupConfig{
-			KafkaVersion: &cfg.KafkaConfig.Version,
-			Offset:       &kafkaOffset,
-		},
+		cgConfig,
 	)
 	if err != nil {
 		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": cfg.KafkaConfig.InstanceCompleteTopic})
