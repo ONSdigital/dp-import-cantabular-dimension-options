@@ -32,17 +32,17 @@ func main() {
 	kafkaOffset := kafka.OffsetOldest
 	kafkaConsumer, err := kafka.NewConsumerGroup(
 		ctx,
-		cfg.KafkaAddr,
-		cfg.KafkaInstanceCompleteTopic,
+		cfg.KafkaConfig.Addr,
+		cfg.KafkaConfig.InstanceCompleteTopic,
 		"test-consumer-group",
 		cgChannels,
 		&kafka.ConsumerGroupConfig{
-			KafkaVersion: &cfg.KafkaVersion,
+			KafkaVersion: &cfg.KafkaConfig.Version,
 			Offset:       &kafkaOffset,
 		},
 	)
 	if err != nil {
-		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": cfg.KafkaInstanceCompleteTopic})
+		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": cfg.KafkaConfig.InstanceCompleteTopic})
 		os.Exit(1)
 	}
 

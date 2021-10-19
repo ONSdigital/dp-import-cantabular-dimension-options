@@ -36,17 +36,17 @@ type Service struct {
 var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IConsumerGroup, error) {
 	cgChannels := dpkafka.CreateConsumerGroupChannels(1)
 	kafkaOffset := dpkafka.OffsetNewest
-	if cfg.KafkaOffsetOldest {
+	if cfg.KafkaConfig.OffsetOldest {
 		kafkaOffset = dpkafka.OffsetOldest
 	}
 	return dpkafka.NewConsumerGroup(
 		ctx,
-		cfg.KafkaAddr,
-		cfg.KafkaCategoryDimensionImportTopic,
-		cfg.KafkaCategoryDimensionImportGroup,
+		cfg.KafkaConfig.Addr,
+		cfg.KafkaConfig.CategoryDimensionImportTopic,
+		cfg.KafkaConfig.CategoryDimensionImportGroup,
 		cgChannels,
 		&dpkafka.ConsumerGroupConfig{
-			KafkaVersion: &cfg.KafkaVersion,
+			KafkaVersion: &cfg.KafkaConfig.Version,
 			Offset:       &kafkaOffset,
 		},
 	)
@@ -56,12 +56,12 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IC
 var GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
 	return kafka.NewProducer(
 		ctx,
-		cfg.KafkaAddr,
-		cfg.KafkaInstanceCompleteTopic,
+		cfg.KafkaConfig.Addr,
+		cfg.KafkaConfig.InstanceCompleteTopic,
 		kafka.CreateProducerChannels(),
 		&kafka.ProducerConfig{
-			KafkaVersion:    &cfg.KafkaVersion,
-			MaxMessageBytes: &cfg.KafkaMaxBytes,
+			KafkaVersion:    &cfg.KafkaConfig.Version,
+			MaxMessageBytes: &cfg.KafkaConfig.MaxBytes,
 		},
 	)
 }
@@ -154,8 +154,8 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	log.Info(ctx, "starting service...")
 
 	// Start kafka error logging
-	svc.Consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.Cfg.KafkaCategoryDimensionImportTopic)
-	svc.Producer.Channels().LogErrors(ctx, "error received from kafka producer, topic: "+svc.Cfg.KafkaInstanceCompleteTopic)
+	svc.Consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.Cfg.KafkaConfig.CategoryDimensionImportTopic)
+	svc.Producer.Channels().LogErrors(ctx, "error received from kafka producer, topic: "+svc.Cfg.KafkaConfig.InstanceCompleteTopic)
 
 	// Start consuming Kafka messages with the Event Handler
 	event.Consume(
@@ -168,7 +168,7 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 			svc.ImportAPIClient,
 			svc.Producer,
 		),
-		svc.Cfg.KafkaNumWorkers,
+		svc.Cfg.KafkaConfig.NumWorkers,
 	)
 
 	// Start health checker

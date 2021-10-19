@@ -70,12 +70,12 @@ func (c *Component) initService(ctx context.Context) error {
 	// producer for triggering test events
 	if c.producer, err = kafka.NewProducer(
 		ctx,
-		cfg.KafkaAddr,
-		cfg.KafkaCategoryDimensionImportTopic,
+		cfg.KafkaConfig.Addr,
+		cfg.KafkaConfig.CategoryDimensionImportTopic,
 		kafka.CreateProducerChannels(),
 		&kafka.ProducerConfig{
-			KafkaVersion:    &cfg.KafkaVersion,
-			MaxMessageBytes: &cfg.KafkaMaxBytes,
+			KafkaVersion:    &cfg.KafkaConfig.Version,
+			MaxMessageBytes: &cfg.KafkaConfig.MaxBytes,
 		},
 	); err != nil {
 		return fmt.Errorf("error creating kafka producer: %w", err)
@@ -86,12 +86,12 @@ func (c *Component) initService(ctx context.Context) error {
 	kafkaOffset := kafka.OffsetOldest
 	if c.consumer, err = kafka.NewConsumerGroup(
 		ctx,
-		cfg.KafkaAddr,
-		cfg.KafkaInstanceCompleteTopic,
+		cfg.KafkaConfig.Addr,
+		cfg.KafkaConfig.InstanceCompleteTopic,
 		"category-dimension-import-group",
 		kafka.CreateConsumerGroupChannels(1),
 		&kafka.ConsumerGroupConfig{
-			KafkaVersion: &cfg.KafkaVersion,
+			KafkaVersion: &cfg.KafkaConfig.Version,
 			Offset:       &kafkaOffset,
 		},
 	); err != nil {
