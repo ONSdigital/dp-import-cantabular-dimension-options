@@ -5,6 +5,6 @@ import (
 )
 
 type (
-	CategoryDimensionImport events.CantabularDatasetCategoryDimensionImport 
+	CategoryDimensionImport events.CantabularDatasetCategoryDimensionImport
 	InstanceComplete        events.CantabularDatasetInstanceComplete
 )

@@ -5,6 +5,6 @@ import (
 )
 
 var (
-    CategoryDimensionImport = events.CantabularDatasetCategoryDimensionImportSchema
-    InstanceComplete        = events.CantabularDatasetInstanceCompleteSchema
+	CategoryDimensionImport = events.CantabularDatasetCategoryDimensionImportSchema
+	InstanceComplete        = events.CantabularDatasetInstanceCompleteSchema
 )
