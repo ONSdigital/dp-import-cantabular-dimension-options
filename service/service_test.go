@@ -11,8 +11,8 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/service"
 	serviceMock "github.com/ONSdigital/dp-import-cantabular-dimension-options/service/mock"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
+	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -177,11 +177,14 @@ func TestStart(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		consumerMock := &kafkatest.IConsumerGroupMock{
-			ChannelsFunc: func() *kafka.ConsumerGroupChannels { return &kafka.ConsumerGroupChannels{} },
+			ChannelsFunc:  func() *kafka.ConsumerGroupChannels { return &kafka.ConsumerGroupChannels{} },
+			LogErrorsFunc: func(ctx context.Context) {},
+			StartFunc:     func() error { return nil },
 		}
 
 		producerMock := &kafkatest.IProducerMock{
-			ChannelsFunc: func() *kafka.ProducerChannels { return &kafka.ProducerChannels{} },
+			ChannelsFunc:  func() *kafka.ProducerChannels { return &kafka.ProducerChannels{} },
+			LogErrorsFunc: func(ctx context.Context) {},
 		}
 
 		hcMock := &serviceMock.HealthCheckerMock{
@@ -242,9 +245,9 @@ func TestClose(t *testing.T) {
 
 		// kafka consumer mock, sets consumerListening when StopListeningToConsumer is called
 		consumerMock := &kafkatest.IConsumerGroupMock{
-			StopListeningToConsumerFunc: func(ctx context.Context) error {
+			StopAndWaitFunc: func() {
 				consumerListening = false
-				return nil
+				return
 			},
 			CloseFunc: func(ctx context.Context) error { return nil },
 		}
@@ -285,7 +288,7 @@ func TestClose(t *testing.T) {
 		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {
 			err := svc.Close(context.Background())
 			So(err, ShouldBeNil)
-			So(consumerMock.StopListeningToConsumerCalls(), ShouldHaveLength, 1)
+			So(consumerMock.StopAndWaitCalls(), ShouldHaveLength, 1)
 			So(hcMock.StopCalls(), ShouldHaveLength, 1)
 			So(consumerMock.CloseCalls(), ShouldHaveLength, 1)
 			So(serverMock.ShutdownCalls(), ShouldHaveLength, 1)
@@ -293,8 +296,8 @@ func TestClose(t *testing.T) {
 		})
 
 		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
-			consumerMock.StopListeningToConsumerFunc = func(ctx context.Context) error {
-				return errKafkaConsumer
+			consumerMock.StopAndWaitFunc = func() {
+				return
 			}
 			consumerMock.CloseFunc = func(ctx context.Context) error {
 				return errKafkaConsumer
@@ -308,7 +311,7 @@ func TestClose(t *testing.T) {
 
 			err = svc.Close(context.Background())
 			So(err, ShouldNotBeNil)
-			So(consumerMock.StopListeningToConsumerCalls(), ShouldHaveLength, 1)
+			So(consumerMock.StopAndWaitCalls(), ShouldHaveLength, 1)
 			So(consumerMock.CloseCalls(), ShouldHaveLength, 1)
 			So(hcMock.StopCalls(), ShouldHaveLength, 1)
 			So(serverMock.ShutdownCalls(), ShouldHaveLength, 1)

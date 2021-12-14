@@ -12,8 +12,7 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler"
-	dpkafka "github.com/ONSdigital/dp-kafka/v2"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
@@ -33,13 +32,15 @@ type Service struct {
 }
 
 // GetKafkaConsumer returns a Kafka consumer with the provided config
-var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IConsumerGroup, error) {
-	cgChannels := dpkafka.CreateConsumerGroupChannels(cfg.KafkaConfig.NumWorkers)
-	kafkaOffset := dpkafka.OffsetNewest
+var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
+	kafkaOffset := kafka.OffsetNewest
 	if cfg.KafkaConfig.OffsetOldest {
-		kafkaOffset = dpkafka.OffsetOldest
+		kafkaOffset = kafka.OffsetOldest
 	}
 	cgConfig := &kafka.ConsumerGroupConfig{
+		BrokerAddrs:  cfg.KafkaConfig.Addr,
+		Topic:        cfg.KafkaConfig.CategoryDimensionImportTopic,
+		GroupName:    cfg.KafkaConfig.CategoryDimensionImportGroup,
 		KafkaVersion: &cfg.KafkaConfig.Version,
 		Offset:       &kafkaOffset,
 	}
@@ -51,19 +52,14 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (dpkafka.IC
 			cfg.KafkaConfig.SecSkipVerify,
 		)
 	}
-	return dpkafka.NewConsumerGroup(
-		ctx,
-		cfg.KafkaConfig.Addr,
-		cfg.KafkaConfig.CategoryDimensionImportTopic,
-		cfg.KafkaConfig.CategoryDimensionImportGroup,
-		cgChannels,
-		cgConfig,
-	)
+	return kafka.NewConsumerGroup(ctx, cgConfig)
 }
 
 // GetKafkaProducer returns a kafka producer with the provided config
 var GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
 	pConfig := &kafka.ProducerConfig{
+		BrokerAddrs:     cfg.KafkaConfig.Addr,
+		Topic:           cfg.KafkaConfig.InstanceCompleteTopic,
 		KafkaVersion:    &cfg.KafkaConfig.Version,
 		MaxMessageBytes: &cfg.KafkaConfig.MaxBytes,
 	}
@@ -75,13 +71,7 @@ var GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IPro
 			cfg.KafkaConfig.SecSkipVerify,
 		)
 	}
-	return kafka.NewProducer(
-		ctx,
-		cfg.KafkaConfig.Addr,
-		cfg.KafkaConfig.InstanceCompleteTopic,
-		kafka.CreateProducerChannels(),
-		pConfig,
-	)
+	return kafka.NewProducer(ctx, pConfig)
 }
 
 // GetHTTPServer returns an http server
@@ -172,8 +162,8 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	log.Info(ctx, "starting service...")
 
 	// Start kafka error logging
-	svc.Consumer.Channels().LogErrors(ctx, "error received from kafka consumer, topic: "+svc.Cfg.KafkaConfig.CategoryDimensionImportTopic)
-	svc.Producer.Channels().LogErrors(ctx, "error received from kafka producer, topic: "+svc.Cfg.KafkaConfig.InstanceCompleteTopic)
+	svc.Consumer.LogErrors(ctx)
+	svc.Producer.LogErrors(ctx)
 
 	// Start consuming Kafka messages with the Event Handler
 	event.Consume(
@@ -188,6 +178,9 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 		),
 		svc.Cfg.KafkaConfig.NumWorkers,
 	)
+
+	// Start consuming as soon as possible
+	svc.Consumer.Start()
 
 	// Start health checker
 	svc.HealthCheck.Start(ctx)
@@ -220,10 +213,7 @@ func (svc *Service) Close(ctx context.Context) error {
 		// This will automatically stop the event consumer loops and no more messages will be processed.
 		// The kafka consumer will be closed after the service shuts down.
 		if svc.Consumer != nil {
-			if err := svc.Consumer.StopListeningToConsumer(ctx); err != nil {
-				log.Error(ctx, "error stopping kafka consumer listener", err)
-				hasShutdownError = true
-			}
+			svc.Consumer.StopAndWait()
 			log.Info(ctx, "stopped kafka consumer listener")
 		}
 

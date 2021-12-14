@@ -16,8 +16,8 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler/mock"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
+	"github.com/ONSdigital/dp-kafka/v3/kafkatest"
 	"github.com/ONSdigital/log.go/v2/log"
 	. "github.com/smartystreets/goconvey/convey"
 )

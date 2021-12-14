@@ -10,7 +10,7 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
@@ -28,8 +28,9 @@ func main() {
 	}
 
 	// Create Kafka Producer
-	pChannels := kafka.CreateProducerChannels()
 	pConfig := &kafka.ProducerConfig{
+		BrokerAddrs:     cfg.KafkaConfig.Addr,
+		Topic:           cfg.KafkaConfig.CategoryDimensionImportTopic,
 		KafkaVersion:    &cfg.KafkaConfig.Version,
 		MaxMessageBytes: &cfg.KafkaConfig.MaxBytes,
 	}
@@ -41,14 +42,14 @@ func main() {
 			cfg.KafkaConfig.SecSkipVerify,
 		)
 	}
-	kafkaProducer, err := kafka.NewProducer(ctx, cfg.KafkaConfig.Addr, cfg.KafkaConfig.CategoryDimensionImportTopic, pChannels, pConfig)
+	kafkaProducer, err := kafka.NewProducer(ctx, pConfig)
 	if err != nil {
 		log.Fatal(ctx, "fatal error trying to create kafka producer", err, log.Data{"topic": cfg.KafkaConfig.CategoryDimensionImportTopic})
 		os.Exit(1)
 	}
 
 	// kafka error logging go-routines
-	kafkaProducer.Channels().LogErrors(ctx, "kafka producer")
+	kafkaProducer.LogErrors(ctx)
 
 	time.Sleep(500 * time.Millisecond)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -63,7 +64,7 @@ func main() {
 		}
 
 		// Wait for producer to be initialised
-		<-kafkaProducer.Channels().Ready
+		<-kafkaProducer.Channels().Initialised
 
 		// Send bytes to output channel
 		kafkaProducer.Channels().Output <- bytes

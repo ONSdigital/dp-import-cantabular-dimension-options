@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
@@ -29,8 +29,10 @@ func main() {
 
 	// Create Kafka Consumer
 	kafkaOffset := kafka.OffsetOldest
-	cgChannels := kafka.CreateConsumerGroupChannels(1)
 	cgConfig := &kafka.ConsumerGroupConfig{
+		BrokerAddrs:  cfg.KafkaConfig.Addr,
+		Topic:        cfg.KafkaConfig.InstanceCompleteTopic,
+		GroupName:    "test-consumer-group",
 		KafkaVersion: &cfg.KafkaConfig.Version,
 		Offset:       &kafkaOffset,
 	}
@@ -42,32 +44,28 @@ func main() {
 			cfg.KafkaConfig.SecSkipVerify,
 		)
 	}
-	kafkaConsumer, err := kafka.NewConsumerGroup(
-		ctx,
-		cfg.KafkaConfig.Addr,
-		cfg.KafkaConfig.InstanceCompleteTopic,
-		"test-consumer-group",
-		cgChannels,
-		cgConfig,
-	)
+	kafkaConsumer, err := kafka.NewConsumerGroup(ctx, cgConfig)
 	if err != nil {
 		log.Fatal(ctx, "fatal error trying to create kafka consumer", err, log.Data{"topic": cfg.KafkaConfig.InstanceCompleteTopic})
 		os.Exit(1)
 	}
 
+	// start consuming as soon as possible
+	kafkaConsumer.Start()
+
 	// kafka error logging go-routines
-	kafkaConsumer.Channels().LogErrors(ctx, "kafka consumer")
+	kafkaConsumer.LogErrors(ctx)
 
 	// block until the consumer is initialised (of closed)
 	select {
-	case <-cgChannels.Ready:
+	case <-kafkaConsumer.Channels().Initialised:
 		log.Warn(ctx, "[KAFKA-TEST] Consumer is now initialised.")
-	case <-cgChannels.Closer:
+	case <-kafkaConsumer.Channels().Closer:
 		log.Warn(ctx, "[KAFKA-TEST] Consumer is being closed.")
 	}
 
 	// consume in a new loop
-	go consume(ctx, cgChannels.Upstream)
+	go consume(ctx, kafkaConsumer.Channels().Upstream)
 
 	// blocks until an os interrupt or a fatal error occurs
 	sig := <-signals
