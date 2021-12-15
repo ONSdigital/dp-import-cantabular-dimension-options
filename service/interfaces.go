@@ -27,7 +27,8 @@ type HealthChecker interface {
 	Handler(w http.ResponseWriter, req *http.Request)
 	Start(ctx context.Context)
 	Stop()
-	AddCheck(name string, checker healthcheck.Checker) (err error)
+	AddAndGetCheck(name string, checker healthcheck.Checker) (check *healthcheck.Check, err error)
+	Subscribe(s healthcheck.Subscriber, checks ...*healthcheck.Check)
 }
 
 // CantabularClient defines the required CantabularClient methods
@@ -39,14 +40,14 @@ type CantabularClient interface {
 // DatasetAPIClient defines the required Dataset API methods
 type DatasetAPIClient interface {
 	GetInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID, ifMatch string) (m dataset.Instance, eTag string, err error)
-	PatchInstanceDimensions(ctx context.Context, serviceAuthToken, instanceID string, data []*dataset.OptionPost, ifMatch string) (eTag string, err error)
+	PatchInstanceDimensions(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (eTag string, err error)
 	PutInstanceState(ctx context.Context, serviceAuthToken, instanceID string, state dataset.State, ifMatch string) (eTag string, err error)
 	Checker(context.Context, *healthcheck.CheckState) error
 }
 
 // ImportAPIClient defines the required Import API methods
 type ImportAPIClient interface {
-	UpdateImportJobState(ctx context.Context, jobID, serviceToken string, newState string) error
+	UpdateImportJobState(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error
 	IncreaseProcessedInstanceCount(ctx context.Context, jobID, serviceToken, instanceID string) (procInst []importapi.ProcessedInstances, err error)
 	Checker(context.Context, *healthcheck.CheckState) error
 }

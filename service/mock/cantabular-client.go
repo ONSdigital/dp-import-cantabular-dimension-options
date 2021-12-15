@@ -11,125 +11,122 @@ import (
 	"sync"
 )
 
-var (
-	lockCantabularClientMockChecker     sync.RWMutex
-	lockCantabularClientMockGetCodebook sync.RWMutex
-)
-
 // Ensure, that CantabularClientMock does implement service.CantabularClient.
 // If this is not the case, regenerate this file with moq.
 var _ service.CantabularClient = &CantabularClientMock{}
 
 // CantabularClientMock is a mock implementation of service.CantabularClient.
 //
-//     func TestSomethingThatUsesCantabularClient(t *testing.T) {
+// 	func TestSomethingThatUsesCantabularClient(t *testing.T) {
 //
-//         // make and configure a mocked service.CantabularClient
-//         mockedCantabularClient := &CantabularClientMock{
-//             CheckerFunc: func(in1 context.Context, in2 *healthcheck.CheckState) error {
-// 	               panic("mock out the Checker method")
-//             },
-//             GetCodebookFunc: func(in1 context.Context, in2 cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
-// 	               panic("mock out the GetCodebook method")
-//             },
-//         }
+// 		// make and configure a mocked service.CantabularClient
+// 		mockedCantabularClient := &CantabularClientMock{
+// 			CheckerFunc: func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
+// 				panic("mock out the Checker method")
+// 			},
+// 			GetCodebookFunc: func(contextMoqParam context.Context, getCodebookRequest cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
+// 				panic("mock out the GetCodebook method")
+// 			},
+// 		}
 //
-//         // use mockedCantabularClient in code that requires service.CantabularClient
-//         // and then make assertions.
+// 		// use mockedCantabularClient in code that requires service.CantabularClient
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type CantabularClientMock struct {
 	// CheckerFunc mocks the Checker method.
-	CheckerFunc func(in1 context.Context, in2 *healthcheck.CheckState) error
+	CheckerFunc func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error
 
 	// GetCodebookFunc mocks the GetCodebook method.
-	GetCodebookFunc func(in1 context.Context, in2 cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error)
+	GetCodebookFunc func(contextMoqParam context.Context, getCodebookRequest cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// Checker holds details about calls to the Checker method.
 		Checker []struct {
-			// In1 is the in1 argument value.
-			In1 context.Context
-			// In2 is the in2 argument value.
-			In2 *healthcheck.CheckState
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// CheckState is the checkState argument value.
+			CheckState *healthcheck.CheckState
 		}
 		// GetCodebook holds details about calls to the GetCodebook method.
 		GetCodebook []struct {
-			// In1 is the in1 argument value.
-			In1 context.Context
-			// In2 is the in2 argument value.
-			In2 cantabular.GetCodebookRequest
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// GetCodebookRequest is the getCodebookRequest argument value.
+			GetCodebookRequest cantabular.GetCodebookRequest
 		}
 	}
+	lockChecker     sync.RWMutex
+	lockGetCodebook sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
-func (mock *CantabularClientMock) Checker(in1 context.Context, in2 *healthcheck.CheckState) error {
+func (mock *CantabularClientMock) Checker(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
 	if mock.CheckerFunc == nil {
 		panic("CantabularClientMock.CheckerFunc: method is nil but CantabularClient.Checker was just called")
 	}
 	callInfo := struct {
-		In1 context.Context
-		In2 *healthcheck.CheckState
+		ContextMoqParam context.Context
+		CheckState      *healthcheck.CheckState
 	}{
-		In1: in1,
-		In2: in2,
+		ContextMoqParam: contextMoqParam,
+		CheckState:      checkState,
 	}
-	lockCantabularClientMockChecker.Lock()
+	mock.lockChecker.Lock()
 	mock.calls.Checker = append(mock.calls.Checker, callInfo)
-	lockCantabularClientMockChecker.Unlock()
-	return mock.CheckerFunc(in1, in2)
+	mock.lockChecker.Unlock()
+	return mock.CheckerFunc(contextMoqParam, checkState)
 }
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
 //     len(mockedCantabularClient.CheckerCalls())
 func (mock *CantabularClientMock) CheckerCalls() []struct {
-	In1 context.Context
-	In2 *healthcheck.CheckState
+	ContextMoqParam context.Context
+	CheckState      *healthcheck.CheckState
 } {
 	var calls []struct {
-		In1 context.Context
-		In2 *healthcheck.CheckState
+		ContextMoqParam context.Context
+		CheckState      *healthcheck.CheckState
 	}
-	lockCantabularClientMockChecker.RLock()
+	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
-	lockCantabularClientMockChecker.RUnlock()
+	mock.lockChecker.RUnlock()
 	return calls
 }
 
 // GetCodebook calls GetCodebookFunc.
-func (mock *CantabularClientMock) GetCodebook(in1 context.Context, in2 cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
+func (mock *CantabularClientMock) GetCodebook(contextMoqParam context.Context, getCodebookRequest cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
 	if mock.GetCodebookFunc == nil {
 		panic("CantabularClientMock.GetCodebookFunc: method is nil but CantabularClient.GetCodebook was just called")
 	}
 	callInfo := struct {
-		In1 context.Context
-		In2 cantabular.GetCodebookRequest
+		ContextMoqParam    context.Context
+		GetCodebookRequest cantabular.GetCodebookRequest
 	}{
-		In1: in1,
-		In2: in2,
+		ContextMoqParam:    contextMoqParam,
+		GetCodebookRequest: getCodebookRequest,
 	}
-	lockCantabularClientMockGetCodebook.Lock()
+	mock.lockGetCodebook.Lock()
 	mock.calls.GetCodebook = append(mock.calls.GetCodebook, callInfo)
-	lockCantabularClientMockGetCodebook.Unlock()
-	return mock.GetCodebookFunc(in1, in2)
+	mock.lockGetCodebook.Unlock()
+	return mock.GetCodebookFunc(contextMoqParam, getCodebookRequest)
 }
 
 // GetCodebookCalls gets all the calls that were made to GetCodebook.
 // Check the length with:
 //     len(mockedCantabularClient.GetCodebookCalls())
 func (mock *CantabularClientMock) GetCodebookCalls() []struct {
-	In1 context.Context
-	In2 cantabular.GetCodebookRequest
+	ContextMoqParam    context.Context
+	GetCodebookRequest cantabular.GetCodebookRequest
 } {
 	var calls []struct {
-		In1 context.Context
-		In2 cantabular.GetCodebookRequest
+		ContextMoqParam    context.Context
+		GetCodebookRequest cantabular.GetCodebookRequest
 	}
-	lockCantabularClientMockGetCodebook.RLock()
+	mock.lockGetCodebook.RLock()
 	calls = mock.calls.GetCodebook
-	lockCantabularClientMockGetCodebook.RUnlock()
+	mock.lockGetCodebook.RUnlock()
 	return calls
 }

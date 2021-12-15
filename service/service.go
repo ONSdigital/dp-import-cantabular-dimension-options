@@ -179,8 +179,10 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 		svc.Cfg.KafkaConfig.NumWorkers,
 	)
 
-	// Start consuming as soon as possible
-	svc.Consumer.Start()
+	// If start/stop on health updates is disabled, start consuming as soon as possible
+	if !svc.Cfg.StopConsumingOnUnhealthy {
+		svc.Consumer.Start()
+	}
 
 	// Start health checker
 	svc.HealthCheck.Start(ctx)
@@ -266,11 +268,12 @@ func (svc *Service) Close(ctx context.Context) error {
 func (svc *Service) registerCheckers() error {
 	hc := svc.HealthCheck
 
-	if err := hc.AddCheck("Kafka consumer", svc.Consumer.Checker); err != nil {
+	if _, err := hc.AddAndGetCheck("Kafka consumer", svc.Consumer.Checker); err != nil {
 		return fmt.Errorf("error adding check for Kafka consumer: %w", err)
 	}
 
-	if err := hc.AddCheck("Kafka producer", svc.Producer.Checker); err != nil {
+	checkProducer, err := hc.AddAndGetCheck("Kafka producer", svc.Producer.Checker)
+	if err != nil {
 		return fmt.Errorf("error adding check for Kafka producer: %w", err)
 	}
 
@@ -283,16 +286,23 @@ func (svc *Service) registerCheckers() error {
 			return nil
 		}
 	}
-	if err := hc.AddCheck("Cantabular", cantabularChecker); err != nil {
+	checkCantabular, err := hc.AddAndGetCheck("Cantabular", cantabularChecker)
+	if err != nil {
 		return fmt.Errorf("error adding check for Cantabular: %w", err)
 	}
 
-	if err := hc.AddCheck("Dataset API", svc.DatasetAPIClient.Checker); err != nil {
+	checkDatasetApi, err := hc.AddAndGetCheck("Dataset API", svc.DatasetAPIClient.Checker)
+	if err != nil {
 		return fmt.Errorf("error adding check for Dataset API: %w", err)
 	}
 
-	if err := hc.AddCheck("Import API", svc.ImportAPIClient.Checker); err != nil {
+	checkImportApi, err := hc.AddAndGetCheck("Import API", svc.ImportAPIClient.Checker)
+	if err != nil {
 		return fmt.Errorf("error adding check for Import API: %w", err)
+	}
+
+	if svc.Cfg.StopConsumingOnUnhealthy {
+		svc.HealthCheck.Subscribe(svc.Consumer, checkProducer, checkCantabular, checkDatasetApi, checkImportApi)
 	}
 
 	return nil

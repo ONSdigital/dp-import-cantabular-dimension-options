@@ -11,55 +11,49 @@ import (
 	"sync"
 )
 
-var (
-	lockImportAPIClientMockChecker                        sync.RWMutex
-	lockImportAPIClientMockIncreaseProcessedInstanceCount sync.RWMutex
-	lockImportAPIClientMockUpdateImportJobState           sync.RWMutex
-)
-
 // Ensure, that ImportAPIClientMock does implement service.ImportAPIClient.
 // If this is not the case, regenerate this file with moq.
 var _ service.ImportAPIClient = &ImportAPIClientMock{}
 
 // ImportAPIClientMock is a mock implementation of service.ImportAPIClient.
 //
-//     func TestSomethingThatUsesImportAPIClient(t *testing.T) {
+// 	func TestSomethingThatUsesImportAPIClient(t *testing.T) {
 //
-//         // make and configure a mocked service.ImportAPIClient
-//         mockedImportAPIClient := &ImportAPIClientMock{
-//             CheckerFunc: func(in1 context.Context, in2 *healthcheck.CheckState) error {
-// 	               panic("mock out the Checker method")
-//             },
-//             IncreaseProcessedInstanceCountFunc: func(ctx context.Context, jobID string, serviceToken string, instanceID string) ([]importapi.ProcessedInstances, error) {
-// 	               panic("mock out the IncreaseProcessedInstanceCount method")
-//             },
-//             UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
-// 	               panic("mock out the UpdateImportJobState method")
-//             },
-//         }
+// 		// make and configure a mocked service.ImportAPIClient
+// 		mockedImportAPIClient := &ImportAPIClientMock{
+// 			CheckerFunc: func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
+// 				panic("mock out the Checker method")
+// 			},
+// 			IncreaseProcessedInstanceCountFunc: func(ctx context.Context, jobID string, serviceToken string, instanceID string) ([]importapi.ProcessedInstances, error) {
+// 				panic("mock out the IncreaseProcessedInstanceCount method")
+// 			},
+// 			UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error {
+// 				panic("mock out the UpdateImportJobState method")
+// 			},
+// 		}
 //
-//         // use mockedImportAPIClient in code that requires service.ImportAPIClient
-//         // and then make assertions.
+// 		// use mockedImportAPIClient in code that requires service.ImportAPIClient
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type ImportAPIClientMock struct {
 	// CheckerFunc mocks the Checker method.
-	CheckerFunc func(in1 context.Context, in2 *healthcheck.CheckState) error
+	CheckerFunc func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error
 
 	// IncreaseProcessedInstanceCountFunc mocks the IncreaseProcessedInstanceCount method.
 	IncreaseProcessedInstanceCountFunc func(ctx context.Context, jobID string, serviceToken string, instanceID string) ([]importapi.ProcessedInstances, error)
 
 	// UpdateImportJobStateFunc mocks the UpdateImportJobState method.
-	UpdateImportJobStateFunc func(ctx context.Context, jobID string, serviceToken string, newState string) error
+	UpdateImportJobStateFunc func(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// Checker holds details about calls to the Checker method.
 		Checker []struct {
-			// In1 is the in1 argument value.
-			In1 context.Context
-			// In2 is the in2 argument value.
-			In2 *healthcheck.CheckState
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// CheckState is the checkState argument value.
+			CheckState *healthcheck.CheckState
 		}
 		// IncreaseProcessedInstanceCount holds details about calls to the IncreaseProcessedInstanceCount method.
 		IncreaseProcessedInstanceCount []struct {
@@ -81,43 +75,46 @@ type ImportAPIClientMock struct {
 			// ServiceToken is the serviceToken argument value.
 			ServiceToken string
 			// NewState is the newState argument value.
-			NewState string
+			NewState importapi.State
 		}
 	}
+	lockChecker                        sync.RWMutex
+	lockIncreaseProcessedInstanceCount sync.RWMutex
+	lockUpdateImportJobState           sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
-func (mock *ImportAPIClientMock) Checker(in1 context.Context, in2 *healthcheck.CheckState) error {
+func (mock *ImportAPIClientMock) Checker(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
 	if mock.CheckerFunc == nil {
 		panic("ImportAPIClientMock.CheckerFunc: method is nil but ImportAPIClient.Checker was just called")
 	}
 	callInfo := struct {
-		In1 context.Context
-		In2 *healthcheck.CheckState
+		ContextMoqParam context.Context
+		CheckState      *healthcheck.CheckState
 	}{
-		In1: in1,
-		In2: in2,
+		ContextMoqParam: contextMoqParam,
+		CheckState:      checkState,
 	}
-	lockImportAPIClientMockChecker.Lock()
+	mock.lockChecker.Lock()
 	mock.calls.Checker = append(mock.calls.Checker, callInfo)
-	lockImportAPIClientMockChecker.Unlock()
-	return mock.CheckerFunc(in1, in2)
+	mock.lockChecker.Unlock()
+	return mock.CheckerFunc(contextMoqParam, checkState)
 }
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
 //     len(mockedImportAPIClient.CheckerCalls())
 func (mock *ImportAPIClientMock) CheckerCalls() []struct {
-	In1 context.Context
-	In2 *healthcheck.CheckState
+	ContextMoqParam context.Context
+	CheckState      *healthcheck.CheckState
 } {
 	var calls []struct {
-		In1 context.Context
-		In2 *healthcheck.CheckState
+		ContextMoqParam context.Context
+		CheckState      *healthcheck.CheckState
 	}
-	lockImportAPIClientMockChecker.RLock()
+	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
-	lockImportAPIClientMockChecker.RUnlock()
+	mock.lockChecker.RUnlock()
 	return calls
 }
 
@@ -137,9 +134,9 @@ func (mock *ImportAPIClientMock) IncreaseProcessedInstanceCount(ctx context.Cont
 		ServiceToken: serviceToken,
 		InstanceID:   instanceID,
 	}
-	lockImportAPIClientMockIncreaseProcessedInstanceCount.Lock()
+	mock.lockIncreaseProcessedInstanceCount.Lock()
 	mock.calls.IncreaseProcessedInstanceCount = append(mock.calls.IncreaseProcessedInstanceCount, callInfo)
-	lockImportAPIClientMockIncreaseProcessedInstanceCount.Unlock()
+	mock.lockIncreaseProcessedInstanceCount.Unlock()
 	return mock.IncreaseProcessedInstanceCountFunc(ctx, jobID, serviceToken, instanceID)
 }
 
@@ -158,14 +155,14 @@ func (mock *ImportAPIClientMock) IncreaseProcessedInstanceCountCalls() []struct 
 		ServiceToken string
 		InstanceID   string
 	}
-	lockImportAPIClientMockIncreaseProcessedInstanceCount.RLock()
+	mock.lockIncreaseProcessedInstanceCount.RLock()
 	calls = mock.calls.IncreaseProcessedInstanceCount
-	lockImportAPIClientMockIncreaseProcessedInstanceCount.RUnlock()
+	mock.lockIncreaseProcessedInstanceCount.RUnlock()
 	return calls
 }
 
 // UpdateImportJobState calls UpdateImportJobStateFunc.
-func (mock *ImportAPIClientMock) UpdateImportJobState(ctx context.Context, jobID string, serviceToken string, newState string) error {
+func (mock *ImportAPIClientMock) UpdateImportJobState(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error {
 	if mock.UpdateImportJobStateFunc == nil {
 		panic("ImportAPIClientMock.UpdateImportJobStateFunc: method is nil but ImportAPIClient.UpdateImportJobState was just called")
 	}
@@ -173,16 +170,16 @@ func (mock *ImportAPIClientMock) UpdateImportJobState(ctx context.Context, jobID
 		Ctx          context.Context
 		JobID        string
 		ServiceToken string
-		NewState     string
+		NewState     importapi.State
 	}{
 		Ctx:          ctx,
 		JobID:        jobID,
 		ServiceToken: serviceToken,
 		NewState:     newState,
 	}
-	lockImportAPIClientMockUpdateImportJobState.Lock()
+	mock.lockUpdateImportJobState.Lock()
 	mock.calls.UpdateImportJobState = append(mock.calls.UpdateImportJobState, callInfo)
-	lockImportAPIClientMockUpdateImportJobState.Unlock()
+	mock.lockUpdateImportJobState.Unlock()
 	return mock.UpdateImportJobStateFunc(ctx, jobID, serviceToken, newState)
 }
 
@@ -193,16 +190,16 @@ func (mock *ImportAPIClientMock) UpdateImportJobStateCalls() []struct {
 	Ctx          context.Context
 	JobID        string
 	ServiceToken string
-	NewState     string
+	NewState     importapi.State
 } {
 	var calls []struct {
 		Ctx          context.Context
 		JobID        string
 		ServiceToken string
-		NewState     string
+		NewState     importapi.State
 	}
-	lockImportAPIClientMockUpdateImportJobState.RLock()
+	mock.lockUpdateImportJobState.RLock()
 	calls = mock.calls.UpdateImportJobState
-	lockImportAPIClientMockUpdateImportJobState.RUnlock()
+	mock.lockUpdateImportJobState.RUnlock()
 	return calls
 }

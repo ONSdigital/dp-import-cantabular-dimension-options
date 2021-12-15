@@ -20,12 +20,6 @@ import (
 	"github.com/ONSdigital/log.go/v2/log"
 )
 
-// StateImportCompleted is the 'completed' state for an import job
-const (
-	StateImportCompleted = "completed"
-	StateImportFailed    = "failed"
-)
-
 // MaxConflictRetries defines the maximum number of times that a post request will be retired after a conflict response
 const MaxConflictRetries = 10
 
@@ -134,7 +128,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 	}
 	if importComplete {
 		// Import api update job to completed state
-		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
+		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, importapi.StateCompleted); err != nil {
 			return fmt.Errorf("error updating import job to completed state: %w", err)
 		}
 		log.Info(ctx, "all instances for the import have been successfully processed and the job has been set to completed state", log.Data{"event": e})
@@ -192,7 +186,7 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 // If the eTag value changes, validate the instance state again and retry only if it is still in 'completed' state.
 // We will do up to MaxConflictRetries retires, if all of them fail, set the instance and import job to failed state
 func (h *CategoryDimensionImport) PatchInstanceDimensionsWithRetries(ctx context.Context, e *event.CategoryDimensionImport, options []*dataset.OptionPost, eTag string, attempt int) (newETag string, err error) {
-	eTag, err = h.datasets.PatchInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, options, eTag)
+	eTag, err = h.datasets.PatchInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, options, nil, eTag)
 	if err != nil {
 		switch errPost := err.(type) {
 		// ErrInvalidDatasetAPIResponse covers the case where the dataset API responded with an unexpected Status Code.
@@ -235,7 +229,7 @@ func (h *CategoryDimensionImport) setImportToFailed(ctx context.Context, err err
 	if _, errUpdateImport := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag); errUpdateImport != nil {
 		additionalErrs = append(additionalErrs, fmt.Errorf("failed to update instance: %w", errUpdateImport))
 	}
-	if errUpdateInstance := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportFailed); errUpdateInstance != nil {
+	if errUpdateInstance := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, importapi.StateFailed); errUpdateInstance != nil {
 		additionalErrs = append(additionalErrs, fmt.Errorf("failed to update import job state: %w", errUpdateInstance))
 	}
 

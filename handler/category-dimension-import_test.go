@@ -62,7 +62,7 @@ func TestHandle(t *testing.T) {
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappy()
 		importAPIClient := importAPIClientHappy(false, false)
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 		Convey("When Handle is successfully triggered", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -70,7 +70,7 @@ func TestHandle(t *testing.T) {
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
 				So(ctblrClient.GetCodebookCalls(), ShouldHaveLength, 1)
-				So(ctblrClient.GetCodebookCalls()[0].In2, ShouldResemble, cantabular.GetCodebookRequest{
+				So(ctblrClient.GetCodebookCalls()[0].GetCodebookRequest, ShouldResemble, cantabular.GetCodebookRequest{
 					DatasetName: "test-blob",
 					Categories:  true,
 					Variables:   []string{"test-variable"},
@@ -89,7 +89,7 @@ func TestHandle(t *testing.T) {
 				// First batch has the first 2 items
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].Data, ShouldResemble, []*dataset.OptionPost{
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].Upserts, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code1",
 						Option:   "code1",
@@ -109,7 +109,7 @@ func TestHandle(t *testing.T) {
 				// Second batch has the remaining item
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Data, ShouldResemble, []*dataset.OptionPost{
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Upserts, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code3",
 						Option:   "code3",
@@ -144,7 +144,7 @@ func TestHandle(t *testing.T) {
 			Output: make(chan []byte, 1),
 		}, true)
 
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, producer)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
 
 		Convey("When Handle is successfully triggered", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -160,7 +160,7 @@ func TestHandle(t *testing.T) {
 			Convey("Then the import job is set to state completed", func() {
 				So(importAPIClient.UpdateImportJobStateCalls(), ShouldHaveLength, 1)
 				So(importAPIClient.UpdateImportJobStateCalls()[0].JobID, ShouldResemble, testJobID)
-				So(importAPIClient.UpdateImportJobStateCalls()[0].NewState, ShouldResemble, handler.StateImportCompleted)
+				So(importAPIClient.UpdateImportJobStateCalls()[0].NewState, ShouldResemble, importapi.StateCompleted)
 				So(importAPIClient.UpdateImportJobStateCalls()[0].ServiceToken, ShouldResemble, testToken)
 			})
 
@@ -198,7 +198,7 @@ func TestHandle(t *testing.T) {
 			Output: make(chan []byte, 1),
 		}, true)
 
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, producer)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
 
 		Convey("When Handle is successfully triggered", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -235,7 +235,7 @@ func TestHandle(t *testing.T) {
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(false, false)
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 		Convey("When Handle is triggered", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -263,7 +263,7 @@ func TestHandle(t *testing.T) {
 
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := mock.DatasetAPIClientMock{}
-		datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+		datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 			switch len(datasetAPIClient.PatchInstanceDimensionsCalls()) {
 			case 0, 1:
 				return testETag, nil
@@ -287,7 +287,7 @@ func TestHandle(t *testing.T) {
 			}
 		}
 		importAPIClient := importAPIClientHappy(false, false)
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, &datasetAPIClient, importAPIClient, nil)
 
 		Convey("When Handle is successfully triggered", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -295,7 +295,7 @@ func TestHandle(t *testing.T) {
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
 				So(ctblrClient.GetCodebookCalls(), ShouldHaveLength, 1)
-				So(ctblrClient.GetCodebookCalls()[0].In2, ShouldResemble, cantabular.GetCodebookRequest{
+				So(ctblrClient.GetCodebookCalls()[0].GetCodebookRequest, ShouldResemble, cantabular.GetCodebookRequest{
 					DatasetName: "test-blob",
 					Categories:  true,
 					Variables:   []string{"test-variable"},
@@ -316,7 +316,7 @@ func TestHandle(t *testing.T) {
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].InstanceID, ShouldEqual, testInstanceID)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].ServiceAuthToken, ShouldEqual, testToken)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].IfMatch, ShouldEqual, testETag)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].Data, ShouldResemble, []*dataset.OptionPost{
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[0].Upserts, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code1",
 						Option:   "code1",
@@ -336,7 +336,7 @@ func TestHandle(t *testing.T) {
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].InstanceID, ShouldEqual, testInstanceID)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].ServiceAuthToken, ShouldEqual, testToken)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].IfMatch, ShouldEqual, testETag)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Data, ShouldResemble, []*dataset.OptionPost{
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[1].Upserts, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code3",
 						Option:   "code3",
@@ -349,7 +349,7 @@ func TestHandle(t *testing.T) {
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].InstanceID, ShouldEqual, testInstanceID)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].ServiceAuthToken, ShouldEqual, testToken)
 				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].IfMatch, ShouldEqual, newETag)
-				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].Data, ShouldResemble, []*dataset.OptionPost{
+				So(datasetAPIClient.PatchInstanceDimensionsCalls()[2].Upserts, ShouldResemble, []*dataset.OptionPost{
 					{
 						Code:     "code3",
 						Option:   "code3",
@@ -393,7 +393,7 @@ func TestHandleFailure(t *testing.T) {
 
 	Convey("Given a handler with a cantabular client that returns an error", t, func() {
 		ctblrClient := cantabularClientUnhappy()
-		datasetAPIClient := mock.DatasetAPIClientMock{
+		datasetAPIClient := &mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{
 					Version: dataset.Version{
@@ -406,7 +406,7 @@ func TestHandleFailure(t *testing.T) {
 			},
 		}
 		importAPIClient := importAPIClientWithUpdateState()
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the wrapped error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -436,7 +436,7 @@ func TestHandleFailure(t *testing.T) {
 
 	Convey("Given a handler with a cantabular client that returns an invalid response", t, func() {
 		ctblrClient := cantabularInvalidResponse()
-		datasetAPIClient := mock.DatasetAPIClientMock{
+		datasetAPIClient := &mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{
 					Version: dataset.Version{
@@ -449,7 +449,7 @@ func TestHandleFailure(t *testing.T) {
 			},
 		}
 		importAPIClient := importAPIClientWithUpdateState()
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the expected validation error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -468,7 +468,7 @@ func TestHandleFailure(t *testing.T) {
 
 	Convey("Given a handler with a dataset API client that returns an error on getInstance", t, func() {
 		ctblrClient := cantabularClientHappy()
-		datasetAPIClient := mock.DatasetAPIClientMock{
+		datasetAPIClient := &mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{}, "", errDataset
 			},
@@ -477,7 +477,7 @@ func TestHandleFailure(t *testing.T) {
 			},
 		}
 		importAPIClient := importAPIClientWithUpdateState()
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -493,7 +493,7 @@ func TestHandleFailure(t *testing.T) {
 	Convey("Given a handler with a dataset API and cantabular clients", t, func() {
 		ctblrClient := cantabularClientHappy()
 		importAPIClient := importAPIClientHappy(false, false)
-		datasetAPIClient := mock.DatasetAPIClientMock{
+		datasetAPIClient := &mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				return dataset.Instance{
 					Version: dataset.Version{
@@ -508,10 +508,10 @@ func TestHandleFailure(t *testing.T) {
 
 		Convey("Where dataset API returns a 500 error on PostInstanceDimensions", func() {
 			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusInternalServerError}, "uri")
-			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
-			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 			Convey("Then when Handle is triggered", func() {
 				err := eventHandler.Handle(ctx, &testEvent)
@@ -534,10 +534,10 @@ func TestHandleFailure(t *testing.T) {
 
 		Convey("Where dataset API returns a generic error on PatchInstanceDimensions", func() {
 			errPatchInstance := errors.New("generic Dataset API Client Error")
-			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 				return "", errPatchInstance
 			}
-			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 			Convey("Then when Handle is triggered", func() {
 				err := eventHandler.Handle(ctx, &testEvent)
@@ -560,7 +560,7 @@ func TestHandleFailure(t *testing.T) {
 
 		Convey("Where dataset API returns a Conflict error on PostInstanceDimensions and the instance has changed to state failed", func() {
 			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusConflict}, "uri")
-			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
 			datasetAPIClient.GetInstanceFunc = func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
@@ -579,7 +579,7 @@ func TestHandleFailure(t *testing.T) {
 					}, newETag, nil
 				}
 			}
-			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 			Convey("Then when Handle is triggered", func() {
 				err := eventHandler.Handle(ctx, &testEvent)
@@ -609,10 +609,10 @@ func TestHandleFailure(t *testing.T) {
 			}()
 
 			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusConflict}, "uri")
-			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
-			eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 			Convey("Then when Handle is triggered", func() {
 				sleepRandomCalls = []int{}
@@ -648,7 +648,7 @@ func TestHandleFailure(t *testing.T) {
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 			return "", fmt.Errorf("dataset api failed to set instance to %s state", state)
 		}
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -674,15 +674,15 @@ func TestHandleFailure(t *testing.T) {
 		datasetAPIClient.PutInstanceStateFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 			return newETag, nil
 		}
-		importAPIClient := mock.ImportAPIClientMock{
+		importAPIClient := &mock.ImportAPIClientMock{
 			IncreaseProcessedInstanceCountFunc: func(ctx context.Context, jobID string, serviceToken string, instanceID string) ([]importapi.ProcessedInstances, error) {
 				return nil, errImportAPI
 			},
-			UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
+			UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error {
 				return nil
 			},
 		}
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, nil)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -699,14 +699,14 @@ func TestHandleFailure(t *testing.T) {
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(true, true)
-		importAPIClient.UpdateImportJobStateFunc = func(ctx context.Context, jobID string, serviceToken string, newState string) error {
+		importAPIClient.UpdateImportJobStateFunc = func(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error {
 			return errImportAPI
 		}
 		producer := kafkatest.NewMessageProducerWithChannels(&kafka.ProducerChannels{
 			Output: make(chan []byte, 1),
 		}, true)
 
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, &ctblrClient, &datasetAPIClient, &importAPIClient, producer)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
 
 		Convey("Then when Handle is triggered, the expected error is returned", func() {
 			err := eventHandler.Handle(ctx, &testEvent)
@@ -728,7 +728,7 @@ func TestHandleFailure(t *testing.T) {
 	})
 }
 
-func validateFailed(datasetAPIClient mock.DatasetAPIClientMock, importAPIClient mock.ImportAPIClientMock) {
+func validateFailed(datasetAPIClient *mock.DatasetAPIClientMock, importAPIClient *mock.ImportAPIClientMock) {
 
 	Convey("Then the instance is set to failed state in dataset API", func() {
 		So(datasetAPIClient.PutInstanceStateCalls(), ShouldHaveLength, 1)
@@ -740,7 +740,7 @@ func validateFailed(datasetAPIClient mock.DatasetAPIClientMock, importAPIClient 
 	Convey("Then the import job is set to failed state in import API", func() {
 		So(importAPIClient.UpdateImportJobStateCalls(), ShouldHaveLength, 1)
 		So(importAPIClient.UpdateImportJobStateCalls()[0].JobID, ShouldEqual, testJobID)
-		So(importAPIClient.UpdateImportJobStateCalls()[0].NewState, ShouldEqual, handler.StateImportFailed)
+		So(importAPIClient.UpdateImportJobStateCalls()[0].NewState, ShouldEqual, importapi.StateFailed)
 	})
 }
 
@@ -769,24 +769,24 @@ var testCodebookResp = &cantabular.GetCodebookResponse{
 	},
 }
 
-func cantabularClientHappy() mock.CantabularClientMock {
-	return mock.CantabularClientMock{
+func cantabularClientHappy() *mock.CantabularClientMock {
+	return &mock.CantabularClientMock{
 		GetCodebookFunc: func(ctx context.Context, req cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
 			return testCodebookResp, nil
 		},
 	}
 }
 
-func cantabularClientUnhappy() mock.CantabularClientMock {
-	return mock.CantabularClientMock{
+func cantabularClientUnhappy() *mock.CantabularClientMock {
+	return &mock.CantabularClientMock{
 		GetCodebookFunc: func(ctx context.Context, req cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
 			return nil, errCantabular
 		},
 	}
 }
 
-func cantabularInvalidResponse() mock.CantabularClientMock {
-	return mock.CantabularClientMock{
+func cantabularInvalidResponse() *mock.CantabularClientMock {
+	return &mock.CantabularClientMock{
 		GetCodebookFunc: func(ctx context.Context, req cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
 			return &cantabular.GetCodebookResponse{
 				Codebook: cantabular.Codebook{},
@@ -795,9 +795,9 @@ func cantabularInvalidResponse() mock.CantabularClientMock {
 	}
 }
 
-func datasetAPIClientHappy() mock.DatasetAPIClientMock {
-	return mock.DatasetAPIClientMock{
-		PatchInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+func datasetAPIClientHappy() *mock.DatasetAPIClientMock {
+	return &mock.DatasetAPIClientMock{
+		PatchInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 			return testETag, nil
 		},
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
@@ -810,9 +810,9 @@ func datasetAPIClientHappy() mock.DatasetAPIClientMock {
 	}
 }
 
-func datasetAPIClientHappyLastDimension() mock.DatasetAPIClientMock {
-	return mock.DatasetAPIClientMock{
-		PatchInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, data []*dataset.OptionPost, ifMatch string) (string, error) {
+func datasetAPIClientHappyLastDimension() *mock.DatasetAPIClientMock {
+	return &mock.DatasetAPIClientMock{
+		PatchInstanceDimensionsFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 			return testETag, nil
 		},
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
@@ -828,7 +828,7 @@ func datasetAPIClientHappyLastDimension() mock.DatasetAPIClientMock {
 	}
 }
 
-func importAPIClientHappy(isLastInstanceDimension, isLastImportDimension bool) mock.ImportAPIClientMock {
+func importAPIClientHappy(isLastInstanceDimension, isLastImportDimension bool) *mock.ImportAPIClientMock {
 	procInst := []importapi.ProcessedInstances{
 		{
 			ID:             testInstanceID,
@@ -850,19 +850,19 @@ func importAPIClientHappy(isLastInstanceDimension, isLastImportDimension bool) m
 		procInst[1].ProcessedCount = 5
 	}
 
-	return mock.ImportAPIClientMock{
+	return &mock.ImportAPIClientMock{
 		IncreaseProcessedInstanceCountFunc: func(ctx context.Context, jobID string, serviceToken string, instanceID string) ([]importapi.ProcessedInstances, error) {
 			return procInst, nil
 		},
-		UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
+		UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error {
 			return nil
 		},
 	}
 }
 
-func importAPIClientWithUpdateState() mock.ImportAPIClientMock {
-	return mock.ImportAPIClientMock{
-		UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState string) error {
+func importAPIClientWithUpdateState() *mock.ImportAPIClientMock {
+	return &mock.ImportAPIClientMock{
+		UpdateImportJobStateFunc: func(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error {
 			return nil
 		},
 	}
