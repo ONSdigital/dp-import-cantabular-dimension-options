@@ -32,7 +32,14 @@ func main() {
 	}
 }
 
-func run(ctx context.Context) error {
+func run(ctx context.Context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %s", r)
+			fmt.Printf("\n%s\n", err)
+		}
+	}()
+
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 	svcErrors := make(chan error, 1)
@@ -42,6 +49,13 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("unable to retrieve configuration, error: %w", err)
 	}
+	log.Info(ctx, "config on startup", log.Data{"config": cfg, "build_time": BuildTime, "git-commit": GitCommit})
+
+	// Make sure that context is cancelled when 'run' finishes its execution.
+	// Any remaining go-routine that was not terminated during svc.Close (graceful shutdown) will be terminated by ctx.Done()
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
 
 	// Run the service
 	svc := service.New()

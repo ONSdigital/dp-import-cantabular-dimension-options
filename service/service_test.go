@@ -46,7 +46,11 @@ func TestInit(t *testing.T) {
 		cfg, err := config.Get()
 		So(err, ShouldBeNil)
 
-		consumerMock := &kafkatest.IConsumerGroupMock{}
+		consumerMock := &kafkatest.IConsumerGroupMock{
+			RegisterHandlerFunc: func(ctx context.Context, h kafka.Handler) error {
+				return nil
+			},
+		}
 		service.GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
 			return consumerMock, nil
 		}
@@ -186,6 +190,23 @@ func TestInit(t *testing.T) {
 					So(subscribedTo[2], ShouldEqual, testChecks["Dataset API"])
 					So(subscribedTo[3], ShouldEqual, testChecks["Import API"])
 				})
+
+				Convey("And the kafka handler is registered to the consumer", func() {
+					So(consumerMock.RegisterHandlerCalls(), ShouldHaveLength, 1)
+				})
+			})
+		})
+
+		Convey("Given that all dependencies are successfully initialised and StopConsumingOnUnhealthy is disabled", func() {
+			cfg.StopConsumingOnUnhealthy = false
+			defer func() {
+				cfg.StopConsumingOnUnhealthy = true
+			}()
+
+			Convey("Then service Init succeeds, and the kafka consumer does not subscribe to the healthcheck library", func() {
+				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
+				So(err, ShouldBeNil)
+				So(hcMock.SubscribeCalls(), ShouldHaveLength, 0)
 			})
 		})
 	})
@@ -198,13 +219,10 @@ func TestStart(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		consumerMock := &kafkatest.IConsumerGroupMock{
-			ChannelsFunc:  func() *kafka.ConsumerGroupChannels { return &kafka.ConsumerGroupChannels{} },
 			LogErrorsFunc: func(ctx context.Context) {},
-			StartFunc:     func() error { return nil },
 		}
 
 		producerMock := &kafkatest.IProducerMock{
-			ChannelsFunc:  func() *kafka.ProducerChannels { return &kafka.ProducerChannels{} },
 			LogErrorsFunc: func(ctx context.Context) {},
 		}
 
@@ -250,6 +268,25 @@ func TestStart(t *testing.T) {
 			Convey("Then HTTP server errors are reported to the provided errors channel", func() {
 				rxErr := <-errChan
 				So(rxErr.Error(), ShouldResemble, fmt.Sprintf("failure in http listen and serve: %s", errServer.Error()))
+			})
+		})
+
+		Convey("When a service with a successful HTTP server is started and StopConsumingOnUnhealthy is false", func() {
+			cfg.StopConsumingOnUnhealthy = false
+			defer func() {
+				cfg.StopConsumingOnUnhealthy = true
+			}()
+
+			consumerMock.StartFunc = func() error { return nil }
+			serverMock.ListenAndServeFunc = func() error {
+				serverWg.Done()
+				return nil
+			}
+			serverWg.Add(1)
+			svc.Start(ctx, make(chan error, 1))
+
+			Convey("Then the kafka consumer is started", func() {
+				So(consumerMock.StartCalls(), ShouldHaveLength, 1)
 			})
 		})
 	})

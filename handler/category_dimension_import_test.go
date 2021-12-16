@@ -22,6 +22,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+const workerID = 1
+
 var (
 	errCantabular = errors.New("cantabular error")
 	errDataset    = errors.New("dataset api error")
@@ -37,7 +39,7 @@ var (
 	testJobID      = "test-job-id"
 	testBlob       = "test-blob"
 	ctx            = context.Background()
-	testEvent      = event.CategoryDimensionImport{
+	testEvent      = &event.CategoryDimensionImport{
 		InstanceID:     testInstanceID,
 		JobID:          testJobID,
 		DimensionID:    "test-variable",
@@ -64,8 +66,9 @@ func TestHandle(t *testing.T) {
 		importAPIClient := importAPIClientHappy(false, false)
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-		Convey("When Handle is successfully triggered", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("When Handle is successfully triggered", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldBeNil)
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
@@ -146,8 +149,9 @@ func TestHandle(t *testing.T) {
 
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
 
-		Convey("When Handle is successfully triggered", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("When Handle is successfully triggered", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldBeNil)
 
 			Convey("Then the instance is set to state completed", func() {
@@ -200,8 +204,9 @@ func TestHandle(t *testing.T) {
 
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
 
-		Convey("When Handle is successfully triggered", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("When Handle is successfully triggered", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldBeNil)
 
 			Convey("Then the instance is set to state completed", func() {
@@ -237,8 +242,9 @@ func TestHandle(t *testing.T) {
 		importAPIClient := importAPIClientHappy(false, false)
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-		Convey("When Handle is triggered", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("When Handle is triggered", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 
 			Convey("Then no error is returned", func() {
 				So(err, ShouldBeNil)
@@ -289,8 +295,9 @@ func TestHandle(t *testing.T) {
 		importAPIClient := importAPIClientHappy(false, false)
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, &datasetAPIClient, importAPIClient, nil)
 
-		Convey("When Handle is successfully triggered", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("When Handle is successfully triggered", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldBeNil)
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
@@ -382,11 +389,12 @@ func TestHandleFailure(t *testing.T) {
 		}
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, nil, &datasetAPIClient, nil, nil)
 
-		Convey("Then when Handle is triggered, the expected error is returned", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("Then when Handle is triggered, the expected error is returned", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldResemble, handler.NewError(
 				errors.New("instance is in wrong state, no more dimensions options will be imported"),
-				log.Data{"event": &testEvent, "instance_state": dataset.StateFailed.String()},
+				log.Data{"event": testEvent, "instance_state": dataset.StateFailed.String()},
 			))
 		})
 	})
@@ -408,8 +416,9 @@ func TestHandleFailure(t *testing.T) {
 		importAPIClient := importAPIClientWithUpdateState()
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-		Convey("Then when Handle is triggered, the wrapped error is returned", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("Then when Handle is triggered, the wrapped error is returned", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldResemble, fmt.Errorf("error getting cantabular codebook: %w", errCantabular))
 			validateFailed(datasetAPIClient, importAPIClient)
 		})
@@ -419,8 +428,9 @@ func TestHandleFailure(t *testing.T) {
 				return "", errDataset
 			}
 
-			Convey("Then when Handle is triggered, the error with the event and nested error info is returned", func() {
-				err := eventHandler.Handle(ctx, &testEvent)
+			Convey("Then when Handle is triggered, the error with the event and nested error info is returned", func(c C) {
+				msg := kafkaMessage(c, testEvent)
+				err := eventHandler.Handle(ctx, workerID, msg)
 				So(err, ShouldResemble, handler.NewError(
 					fmt.Errorf("error getting cantabular codebook: %w", errCantabular),
 					log.Data{
@@ -451,11 +461,13 @@ func TestHandleFailure(t *testing.T) {
 		importAPIClient := importAPIClientWithUpdateState()
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-		Convey("Then when Handle is triggered, the expected validation error is returned", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("Then when Handle is triggered, the expected validation error is returned", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldResemble, handler.NewError(
 				errors.New("unexpected response from Cantabular server"),
 				log.Data{
+					"event": testEvent,
 					"response": &cantabular.GetCodebookResponse{
 						Codebook: cantabular.Codebook{},
 						Dataset:  cantabular.Dataset{},
@@ -479,8 +491,9 @@ func TestHandleFailure(t *testing.T) {
 		importAPIClient := importAPIClientWithUpdateState()
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-		Convey("Then when Handle is triggered, the expected error is returned", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("Then when Handle is triggered, the expected error is returned", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldResemble, fmt.Errorf("error getting instance from dataset-api: %w", errDataset))
@@ -513,8 +526,9 @@ func TestHandleFailure(t *testing.T) {
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-			Convey("Then when Handle is triggered", func() {
-				err := eventHandler.Handle(ctx, &testEvent)
+			Convey("Then when Handle is triggered", func(c C) {
+				msg := kafkaMessage(c, testEvent)
+				err := eventHandler.Handle(ctx, workerID, msg)
 
 				Convey("Then the expected wrapped error is returned", func() {
 					So(err, ShouldResemble,
@@ -539,8 +553,9 @@ func TestHandleFailure(t *testing.T) {
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-			Convey("Then when Handle is triggered", func() {
-				err := eventHandler.Handle(ctx, &testEvent)
+			Convey("Then when Handle is triggered", func(c C) {
+				msg := kafkaMessage(c, testEvent)
+				err := eventHandler.Handle(ctx, workerID, msg)
 
 				Convey("Then the expected error is returned", func() {
 					So(err, ShouldResemble,
@@ -581,13 +596,14 @@ func TestHandleFailure(t *testing.T) {
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-			Convey("Then when Handle is triggered", func() {
-				err := eventHandler.Handle(ctx, &testEvent)
+			Convey("Then when Handle is triggered", func(c C) {
+				msg := kafkaMessage(c, testEvent)
+				err := eventHandler.Handle(ctx, workerID, msg)
 
 				Convey("Then the expected error is returned", func() {
 					So(err, ShouldResemble, handler.NewError(
 						errors.New("instance is in wrong state, no more dimensions options will be imported"),
-						log.Data{"event": &testEvent, "instance_state": dataset.StateFailed.String()},
+						log.Data{"event": testEvent, "instance_state": dataset.StateFailed.String()},
 					))
 				})
 
@@ -614,9 +630,10 @@ func TestHandleFailure(t *testing.T) {
 			}
 			eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-			Convey("Then when Handle is triggered", func() {
+			Convey("Then when Handle is triggered", func(c C) {
 				sleepRandomCalls = []int{}
-				err := eventHandler.Handle(ctx, &testEvent)
+				msg := kafkaMessage(c, testEvent)
+				err := eventHandler.Handle(ctx, workerID, msg)
 
 				Convey("Then the expected error is returned", func() {
 					So(err, ShouldResemble,
@@ -650,12 +667,13 @@ func TestHandleFailure(t *testing.T) {
 		}
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-		Convey("Then when Handle is triggered, the expected error is returned", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("Then when Handle is triggered, the expected error is returned", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 			So(err, ShouldResemble, handler.NewError(
 				handler.NewError(
 					fmt.Errorf("error while trying to set the instance to edition-confirmed state: %w", errors.New("dataset api failed to set instance to edition-confirmed state")),
-					log.Data{"event": &testEvent}),
+					log.Data{"event": testEvent}),
 				log.Data{
 					"additional_errors": []error{
 						fmt.Errorf(
@@ -684,8 +702,9 @@ func TestHandleFailure(t *testing.T) {
 		}
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, nil)
 
-		Convey("Then when Handle is triggered, the expected error is returned", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("Then when Handle is triggered, the expected error is returned", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldResemble, fmt.Errorf("error increasing and counting instance count in import api: %w", errImportAPI))
@@ -708,8 +727,9 @@ func TestHandleFailure(t *testing.T) {
 
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
 
-		Convey("Then when Handle is triggered, the expected error is returned", func() {
-			err := eventHandler.Handle(ctx, &testEvent)
+		Convey("Then when Handle is triggered, the expected error is returned", func(c C) {
+			msg := kafkaMessage(c, testEvent)
+			err := eventHandler.Handle(ctx, workerID, msg)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldResemble, fmt.Errorf("error updating import job to completed state: %w", errImportAPI))
@@ -866,4 +886,11 @@ func importAPIClientWithUpdateState() *mock.ImportAPIClientMock {
 			return nil
 		},
 	}
+}
+
+// kafkaMessage creates a mocked kafka message with the provided event as data
+func kafkaMessage(c C, e *event.CategoryDimensionImport) *kafkatest.Message {
+	b, err := schema.CategoryDimensionImport.Marshal(e)
+	c.So(err, ShouldBeNil)
+	return kafkatest.NewMessage(b, 0)
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/v2/importapi"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
-	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/handler"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	dphttp "github.com/ONSdigital/dp-net/http"
@@ -42,6 +41,7 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.ICon
 		Topic:        cfg.KafkaConfig.CategoryDimensionImportTopic,
 		GroupName:    cfg.KafkaConfig.CategoryDimensionImportGroup,
 		KafkaVersion: &cfg.KafkaConfig.Version,
+		NumWorkers:   &cfg.KafkaConfig.NumWorkers,
 		Offset:       &kafkaOffset,
 	}
 	if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
@@ -140,6 +140,15 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Config, buildTime, git
 	svc.DatasetAPIClient = GetDatasetAPIClient(cfg)
 	svc.ImportAPIClient = GetImportAPIClient(cfg)
 
+	h := handler.NewCategoryDimensionImport(
+		*svc.Cfg,
+		svc.CantabularClient,
+		svc.DatasetAPIClient,
+		svc.ImportAPIClient,
+		svc.Producer,
+	)
+	svc.Consumer.RegisterHandler(ctx, h.Handle)
+
 	// Get HealthCheck
 	if svc.HealthCheck, err = GetHealthCheck(cfg, buildTime, gitCommit, version); err != nil {
 		return fmt.Errorf("could not instantiate healthcheck: %w", err)
@@ -164,20 +173,6 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	// Start kafka error logging
 	svc.Consumer.LogErrors(ctx)
 	svc.Producer.LogErrors(ctx)
-
-	// Start consuming Kafka messages with the Event Handler
-	event.Consume(
-		ctx,
-		svc.Consumer,
-		handler.NewCategoryDimensionImport(
-			*svc.Cfg,
-			svc.CantabularClient,
-			svc.DatasetAPIClient,
-			svc.ImportAPIClient,
-			svc.Producer,
-		),
-		svc.Cfg.KafkaConfig.NumWorkers,
-	)
 
 	// If start/stop on health updates is disabled, start consuming as soon as possible
 	if !svc.Cfg.StopConsumingOnUnhealthy {
