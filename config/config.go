@@ -60,7 +60,7 @@ func Get() (*Config, error) {
 		DatasetAPIURL:                "http://localhost:22000",
 		CantabularURL:                "http://localhost:8491",
 		ImportAPIURL:                 "http://localhost:21800",
-		CantabularHealthcheckEnabled: false,
+		CantabularHealthcheckEnabled: true,
 		ServiceAuthToken:             "",
 		ComponentTestUseLogFile:      false,
 		BatchSizeLimit:               100, // maximum number of values sent to dataset APIs in a single patch call (note that this value must be lower or equal to dataset api's `MaxRequestOptions`)
