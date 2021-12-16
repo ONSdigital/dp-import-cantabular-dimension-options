@@ -32,7 +32,7 @@ func TestConfig(t *testing.T) {
 				So(cfg.ComponentTestUseLogFile, ShouldBeFalse)
 				So(cfg.BatchSizeLimit, ShouldEqual, 100)
 				So(cfg.StopConsumingOnUnhealthy, ShouldBeTrue)
-				So(cfg.KafkaConfig.Addr, ShouldResemble, []string{"localhost:9092"})
+				So(cfg.KafkaConfig.Addr, ShouldResemble, []string{"localhost:9092", "localhost:9093", "localhost:9094"})
 				So(cfg.KafkaConfig.Version, ShouldEqual, "1.0.2")
 				So(cfg.KafkaConfig.OffsetOldest, ShouldBeTrue)
 				So(cfg.KafkaConfig.NumWorkers, ShouldEqual, 1)

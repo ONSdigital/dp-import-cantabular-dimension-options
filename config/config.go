@@ -66,7 +66,7 @@ func Get() (*Config, error) {
 		BatchSizeLimit:               100, // maximum number of values sent to dataset APIs in a single patch call (note that this value must be lower or equal to dataset api's `MaxRequestOptions`)
 		StopConsumingOnUnhealthy:     true,
 		KafkaConfig: KafkaConfig{
-			Addr:                         []string{"localhost:9092"},
+			Addr:                         []string{"localhost:9092", "localhost:9093", "localhost:9094"},
 			Version:                      "1.0.2",
 			OffsetOldest:                 true,
 			NumWorkers:                   1,
