@@ -29,6 +29,8 @@ type Config struct {
 // KafkaConfig contains the config required to connect to Kafka
 type KafkaConfig struct {
 	Addr                         []string `envconfig:"KAFKA_ADDR"                            json:"-"`
+	ConsumerMinBrokersHealthy    int      `envconfig:"KAFKA_CONSUMER_MIN_BROKERS_HEALTHY"`
+	ProducerMinBrokersHealthy    int      `envconfig:"KAFKA_PRODUCER_MIN_BROKERS_HEALTHY"`
 	Version                      string   `envconfig:"KAFKA_VERSION"`
 	OffsetOldest                 bool     `envconfig:"KAFKA_OFFSET_OLDEST"`
 	NumWorkers                   int      `envconfig:"KAFKA_NUM_WORKERS"`
@@ -67,6 +69,8 @@ func Get() (*Config, error) {
 		StopConsumingOnUnhealthy:     true,
 		KafkaConfig: KafkaConfig{
 			Addr:                         []string{"localhost:9092", "localhost:9093", "localhost:9094"},
+			ConsumerMinBrokersHealthy:    1,
+			ProducerMinBrokersHealthy:    2,
 			Version:                      "1.0.2",
 			OffsetOldest:                 true,
 			NumWorkers:                   1,

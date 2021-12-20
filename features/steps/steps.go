@@ -1,7 +1,6 @@
 package steps
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -263,15 +262,13 @@ func (c *Component) noInstanceCompleteEventsShouldBeProduced() error {
 }
 
 func (c *Component) thisCategoryDimensionImportEventIsQueued(input *godog.DocString) error {
-	ctx := context.Background()
-
 	// testing kafka message that will be produced
 	var testEvent event.CategoryDimensionImport
 	if err := json.Unmarshal([]byte(input.Content), &testEvent); err != nil {
 		return fmt.Errorf("error unmarshaling input to event: %w body: %s", err, input.Content)
 	}
 
-	log.Info(ctx, "event to marshal: ", log.Data{
+	log.Info(c.ctx, "event to marshal: ", log.Data{
 		"event": testEvent,
 	})
 
@@ -281,7 +278,7 @@ func (c *Component) thisCategoryDimensionImportEventIsQueued(input *godog.DocStr
 		return fmt.Errorf("failed to marshal event from schema: %w", err)
 	}
 
-	log.Info(ctx, "marshalled event: ", log.Data{
+	log.Info(c.ctx, "marshalled event: ", log.Data{
 		"event": b,
 	})
 

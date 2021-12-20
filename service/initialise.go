@@ -20,12 +20,13 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.ICon
 		kafkaOffset = kafka.OffsetOldest
 	}
 	cgConfig := &kafka.ConsumerGroupConfig{
-		BrokerAddrs:  cfg.KafkaConfig.Addr,
-		Topic:        cfg.KafkaConfig.CategoryDimensionImportTopic,
-		GroupName:    cfg.KafkaConfig.CategoryDimensionImportGroup,
-		KafkaVersion: &cfg.KafkaConfig.Version,
-		NumWorkers:   &cfg.KafkaConfig.NumWorkers,
-		Offset:       &kafkaOffset,
+		BrokerAddrs:       cfg.KafkaConfig.Addr,
+		Topic:             cfg.KafkaConfig.CategoryDimensionImportTopic,
+		GroupName:         cfg.KafkaConfig.CategoryDimensionImportGroup,
+		MinBrokersHealthy: &cfg.KafkaConfig.ConsumerMinBrokersHealthy,
+		KafkaVersion:      &cfg.KafkaConfig.Version,
+		NumWorkers:        &cfg.KafkaConfig.NumWorkers,
+		Offset:            &kafkaOffset,
 	}
 	if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
 		cgConfig.SecurityConfig = kafka.GetSecurityConfig(
@@ -41,10 +42,11 @@ var GetKafkaConsumer = func(ctx context.Context, cfg *config.Config) (kafka.ICon
 // GetKafkaProducer returns a kafka producer with the provided config
 var GetKafkaProducer = func(ctx context.Context, cfg *config.Config) (kafka.IProducer, error) {
 	pConfig := &kafka.ProducerConfig{
-		BrokerAddrs:     cfg.KafkaConfig.Addr,
-		Topic:           cfg.KafkaConfig.InstanceCompleteTopic,
-		KafkaVersion:    &cfg.KafkaConfig.Version,
-		MaxMessageBytes: &cfg.KafkaConfig.MaxBytes,
+		BrokerAddrs:       cfg.KafkaConfig.Addr,
+		Topic:             cfg.KafkaConfig.InstanceCompleteTopic,
+		MinBrokersHealthy: &cfg.KafkaConfig.ProducerMinBrokersHealthy,
+		KafkaVersion:      &cfg.KafkaConfig.Version,
+		MaxMessageBytes:   &cfg.KafkaConfig.MaxBytes,
 	}
 	if cfg.KafkaConfig.SecProtocol == config.KafkaTLSProtocolFlag {
 		pConfig.SecurityConfig = kafka.GetSecurityConfig(
