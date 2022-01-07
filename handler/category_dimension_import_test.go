@@ -72,11 +72,10 @@ func TestHandle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
-				So(ctblrClient.GetCodebookCalls(), ShouldHaveLength, 1)
-				So(ctblrClient.GetCodebookCalls()[0].GetCodebookRequest, ShouldResemble, cantabular.GetCodebookRequest{
-					DatasetName: "test-blob",
-					Categories:  true,
-					Variables:   []string{"test-variable"},
+				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 1)
+				So(ctblrClient.GetDimensionOptionsCalls()[0].Req, ShouldResemble, cantabular.StaticDatasetQueryRequest{
+					Dataset:   "test-blob",
+					Variables: []string{"test-variable"},
 				})
 			})
 
@@ -301,11 +300,10 @@ func TestHandle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
-				So(ctblrClient.GetCodebookCalls(), ShouldHaveLength, 1)
-				So(ctblrClient.GetCodebookCalls()[0].GetCodebookRequest, ShouldResemble, cantabular.GetCodebookRequest{
-					DatasetName: "test-blob",
-					Categories:  true,
-					Variables:   []string{"test-variable"},
+				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 1)
+				So(ctblrClient.GetDimensionOptionsCalls()[0].Req, ShouldResemble, cantabular.StaticDatasetQueryRequest{
+					Dataset:   "test-blob",
+					Variables: []string{"test-variable"},
 				})
 			})
 
@@ -468,9 +466,12 @@ func TestHandleFailure(t *testing.T) {
 				errors.New("unexpected response from Cantabular server"),
 				log.Data{
 					"event": testEvent,
-					"response": &cantabular.GetCodebookResponse{
-						Codebook: cantabular.Codebook{},
-						Dataset:  cantabular.Dataset{},
+					"response": &cantabular.GetDimensionOptionsResponse{
+						Dataset: cantabular.StaticDatasetDimensionOptions{
+							Table: cantabular.DimensionsTable{
+								Dimensions: nil,
+							},
+						},
 					},
 				}),
 			)
@@ -764,42 +765,39 @@ func validateFailed(datasetAPIClient *mock.DatasetAPIClientMock, importAPIClient
 	})
 }
 
-var testCodebookResp = &cantabular.GetCodebookResponse{
-	Dataset: cantabular.Dataset{
-		Size: 333,
-	},
-	Codebook: cantabular.Codebook{
-		cantabular.Variable{
-			VariableBase: cantabular.VariableBase{
-				Name:  "test-variable",
-				Label: "Test Variable",
-			},
-			Len: 3,
-			Codes: []string{
-				"code1",
-				"code2",
-				"code3",
-			},
-			Labels: []string{
-				"Code 1",
-				"Code 2",
-				"Code 3",
+var testDimensionOptionsResp = &cantabular.GetDimensionOptionsResponse{
+	Dataset: cantabular.StaticDatasetDimensionOptions{
+		Table: cantabular.DimensionsTable{
+			Dimensions: []cantabular.Dimension{
+				{
+					Count: 3,
+					Categories: []cantabular.Category{
+						{Code: "code1", Label: "Code 1"},
+						{Code: "code2", Label: "Code 2"},
+						{Code: "code3", Label: "Code 3"},
+					},
+					Variable: cantabular.VariableBase{
+						Name:  "test-variable",
+						Label: "Test Variable",
+					},
+				},
 			},
 		},
+		// Size: 333,
 	},
 }
 
 func cantabularClientHappy() *mock.CantabularClientMock {
 	return &mock.CantabularClientMock{
-		GetCodebookFunc: func(ctx context.Context, req cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
-			return testCodebookResp, nil
+		GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.StaticDatasetQueryRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+			return testDimensionOptionsResp, nil
 		},
 	}
 }
 
 func cantabularClientUnhappy() *mock.CantabularClientMock {
 	return &mock.CantabularClientMock{
-		GetCodebookFunc: func(ctx context.Context, req cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
+		GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.StaticDatasetQueryRequest) (*cantabular.GetDimensionOptionsResponse, error) {
 			return nil, errCantabular
 		},
 	}
@@ -807,9 +805,11 @@ func cantabularClientUnhappy() *mock.CantabularClientMock {
 
 func cantabularInvalidResponse() *mock.CantabularClientMock {
 	return &mock.CantabularClientMock{
-		GetCodebookFunc: func(ctx context.Context, req cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
-			return &cantabular.GetCodebookResponse{
-				Codebook: cantabular.Codebook{},
+		GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.StaticDatasetQueryRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+			return &cantabular.GetDimensionOptionsResponse{
+				Dataset: cantabular.StaticDatasetDimensionOptions{
+					Table: cantabular.DimensionsTable{},
+				},
 			}, nil
 		},
 	}

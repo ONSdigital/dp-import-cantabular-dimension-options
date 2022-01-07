@@ -18,6 +18,7 @@ type Config struct {
 	DatasetAPIURL                string        `envconfig:"DATASET_API_URL"`
 	ImportAPIURL                 string        `envconfig:"IMPORT_API_URL"`
 	CantabularURL                string        `envconfig:"CANTABULAR_URL"`
+	CantabularExtURL             string        `envconfig:"CANTABULAR_EXT_API_URL"`
 	CantabularHealthcheckEnabled bool          `envconfig:"CANTABULAR_HEALTHCHECK_ENABLED"`
 	ServiceAuthToken             string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 	ComponentTestUseLogFile      bool          `envconfig:"COMPONENT_TEST_USE_LOG_FILE"`
@@ -61,6 +62,7 @@ func Get() (*Config, error) {
 		HealthCheckCriticalTimeout:   90 * time.Second,
 		DatasetAPIURL:                "http://localhost:22000",
 		CantabularURL:                "http://localhost:8491",
+		CantabularExtURL:             "http://localhost:8492",
 		ImportAPIURL:                 "http://localhost:21800",
 		CantabularHealthcheckEnabled: true,
 		ServiceAuthToken:             "",

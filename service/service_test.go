@@ -175,20 +175,22 @@ func TestInit(t *testing.T) {
 				So(svc.Server, ShouldResemble, serverMock)
 
 				Convey("And all checks are registered", func() {
-					So(hcMock.AddAndGetCheckCalls(), ShouldHaveLength, 5)
+					So(hcMock.AddAndGetCheckCalls(), ShouldHaveLength, 6)
 					So(hcMock.AddAndGetCheckCalls()[0].Name, ShouldResemble, "Kafka consumer")
 					So(hcMock.AddAndGetCheckCalls()[1].Name, ShouldResemble, "Kafka producer")
-					So(hcMock.AddAndGetCheckCalls()[2].Name, ShouldResemble, "Cantabular")
-					So(hcMock.AddAndGetCheckCalls()[3].Name, ShouldResemble, "Dataset API")
-					So(hcMock.AddAndGetCheckCalls()[4].Name, ShouldResemble, "Import API")
+					So(hcMock.AddAndGetCheckCalls()[2].Name, ShouldResemble, "Cantabular server")
+					So(hcMock.AddAndGetCheckCalls()[3].Name, ShouldResemble, "Cantabular API Extension")
+					So(hcMock.AddAndGetCheckCalls()[4].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddAndGetCheckCalls()[5].Name, ShouldResemble, "Import API")
 				})
 
 				Convey("Then kafka consumer subscribes to the expected healthcheck checks", func() {
-					So(subscribedTo, ShouldHaveLength, 4)
+					So(subscribedTo, ShouldHaveLength, 5)
 					So(subscribedTo[0], ShouldEqual, testChecks["Kafka producer"])
-					So(subscribedTo[1], ShouldEqual, testChecks["Cantabular"])
-					So(subscribedTo[2], ShouldEqual, testChecks["Dataset API"])
-					So(subscribedTo[3], ShouldEqual, testChecks["Import API"])
+					So(subscribedTo[1], ShouldEqual, testChecks["Cantabular server"])
+					So(subscribedTo[2], ShouldEqual, testChecks["Cantabular API Extension"])
+					So(subscribedTo[3], ShouldEqual, testChecks["Dataset API"])
+					So(subscribedTo[4], ShouldEqual, testChecks["Import API"])
 				})
 
 				Convey("And the kafka handler is registered to the consumer", func() {
