@@ -22,12 +22,15 @@ type Config struct {
 	ServiceAuthToken             string        `envconfig:"SERVICE_AUTH_TOKEN"         json:"-"`
 	ComponentTestUseLogFile      bool          `envconfig:"COMPONENT_TEST_USE_LOG_FILE"`
 	BatchSizeLimit               int           `envconfig:"BATCH_SIZE_LIMIT"`
+	StopConsumingOnUnhealthy     bool          `envconfig:"STOP_CONSUMING_ON_UNHEALTHY"`
 	KafkaConfig                  KafkaConfig
 }
 
 // KafkaConfig contains the config required to connect to Kafka
 type KafkaConfig struct {
 	Addr                         []string `envconfig:"KAFKA_ADDR"                            json:"-"`
+	ConsumerMinBrokersHealthy    int      `envconfig:"KAFKA_CONSUMER_MIN_BROKERS_HEALTHY"`
+	ProducerMinBrokersHealthy    int      `envconfig:"KAFKA_PRODUCER_MIN_BROKERS_HEALTHY"`
 	Version                      string   `envconfig:"KAFKA_VERSION"`
 	OffsetOldest                 bool     `envconfig:"KAFKA_OFFSET_OLDEST"`
 	NumWorkers                   int      `envconfig:"KAFKA_NUM_WORKERS"`
@@ -59,12 +62,15 @@ func Get() (*Config, error) {
 		DatasetAPIURL:                "http://localhost:22000",
 		CantabularURL:                "http://localhost:8491",
 		ImportAPIURL:                 "http://localhost:21800",
-		CantabularHealthcheckEnabled: false,
+		CantabularHealthcheckEnabled: true,
 		ServiceAuthToken:             "",
 		ComponentTestUseLogFile:      false,
 		BatchSizeLimit:               100, // maximum number of values sent to dataset APIs in a single patch call (note that this value must be lower or equal to dataset api's `MaxRequestOptions`)
+		StopConsumingOnUnhealthy:     true,
 		KafkaConfig: KafkaConfig{
-			Addr:                         []string{"localhost:9092"},
+			Addr:                         []string{"localhost:9092", "localhost:9093", "localhost:9094"},
+			ConsumerMinBrokersHealthy:    1,
+			ProducerMinBrokersHealthy:    2,
 			Version:                      "1.0.2",
 			OffsetOldest:                 true,
 			NumWorkers:                   1,

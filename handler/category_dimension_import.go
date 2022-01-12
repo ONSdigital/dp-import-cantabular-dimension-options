@@ -16,14 +16,8 @@ import (
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/config"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
-	kafka "github.com/ONSdigital/dp-kafka/v2"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
-)
-
-// StateImportCompleted is the 'completed' state for an import job
-const (
-	StateImportCompleted = "completed"
-	StateImportFailed    = "failed"
 )
 
 // MaxConflictRetries defines the maximum number of times that a post request will be retired after a conflict response
@@ -77,7 +71,17 @@ func (h *CategoryDimensionImport) getCompletedInstance(ctx context.Context, e *e
 
 // Handle calls Cantabular server to obtain a list of variables for a CantabularBlob,
 // which are then posted to the dataset API as dimension options
-func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryDimensionImport) error {
+func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg kafka.Message) error {
+	e := &event.CategoryDimensionImport{}
+	s := schema.CategoryDimensionImport
+
+	if err := s.Unmarshal(msg.GetData(), e); err != nil {
+		return h.setImportToFailed(ctx, fmt.Errorf("failed to unmarshal event: %w", err), e)
+	}
+
+	logData := log.Data{"event": e}
+	log.Info(ctx, "event received", logData)
+
 	// get instance state and check that it is in completed state
 	_, eTag, err := h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
 	if err != nil {
@@ -98,7 +102,8 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 
 	// validate that there is exactly one Codebook in the response
 	if resp == nil || resp.Codebook == nil || len(resp.Codebook) != 1 {
-		err := NewError(errors.New("unexpected response from Cantabular server"), log.Data{"response": resp})
+		logData["response"] = resp
+		err := NewError(errors.New("unexpected response from Cantabular server"), logData)
 		// set instance state to failed because cantabular response is invalid and the import process will be aborted.
 		return h.setImportToFailed(ctx, err, e)
 	}
@@ -110,9 +115,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
 	}
 
-	log.Info(ctx, "successfully sent all dimension options to dataset api for a dimension", log.Data{
-		"dimension": e.DimensionID,
-	})
+	log.Info(ctx, "successfully sent all dimension options to dataset api for a dimension", logData)
 
 	// Increase the import job with the instance counter and check if this was the last dimension for the instance
 	procInst, err := h.importApi.IncreaseProcessedInstanceCount(ctx, e.JobID, h.cfg.ServiceAuthToken, e.InstanceID)
@@ -121,7 +124,7 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		return h.setImportToFailed(ctx, fmt.Errorf("error increasing and counting instance count in import api: %w", err), e)
 	}
 
-	log.Info(ctx, "event processed (all dimensions for instance processed)- message will be committed by caller", log.Data{"event": e})
+	log.Info(ctx, "event processed (all dimensions for instance processed)- message will be committed by caller", logData)
 
 	instanceLastDimension, importComplete := IsComplete(procInst, e.InstanceID)
 
@@ -130,14 +133,14 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, e *event.CategoryD
 		if err = h.onLastDimension(ctx, e, eTag); err != nil {
 			return h.setImportToFailed(ctx, err, e)
 		}
-		log.Info(ctx, "all dimensions in instance have been completely processed and kafka message has been sent", log.Data{"event": e})
+		log.Info(ctx, "all dimensions in instance have been completely processed and kafka message has been sent", logData)
 	}
 	if importComplete {
 		// Import api update job to completed state
-		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportCompleted); err != nil {
+		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, importapi.StateCompleted); err != nil {
 			return fmt.Errorf("error updating import job to completed state: %w", err)
 		}
-		log.Info(ctx, "all instances for the import have been successfully processed and the job has been set to completed state", log.Data{"event": e})
+		log.Info(ctx, "all instances for the import have been successfully processed and the job has been set to completed state", logData)
 	}
 
 	return nil
@@ -192,7 +195,7 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 // If the eTag value changes, validate the instance state again and retry only if it is still in 'completed' state.
 // We will do up to MaxConflictRetries retires, if all of them fail, set the instance and import job to failed state
 func (h *CategoryDimensionImport) PatchInstanceDimensionsWithRetries(ctx context.Context, e *event.CategoryDimensionImport, options []*dataset.OptionPost, eTag string, attempt int) (newETag string, err error) {
-	eTag, err = h.datasets.PatchInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, options, eTag)
+	eTag, err = h.datasets.PatchInstanceDimensions(ctx, h.cfg.ServiceAuthToken, e.InstanceID, options, nil, eTag)
 	if err != nil {
 		switch errPost := err.(type) {
 		// ErrInvalidDatasetAPIResponse covers the case where the dataset API responded with an unexpected Status Code.
@@ -235,7 +238,7 @@ func (h *CategoryDimensionImport) setImportToFailed(ctx context.Context, err err
 	if _, errUpdateImport := h.datasets.PutInstanceState(ctx, h.cfg.ServiceAuthToken, e.InstanceID, dataset.StateFailed, headers.IfMatchAnyETag); errUpdateImport != nil {
 		additionalErrs = append(additionalErrs, fmt.Errorf("failed to update instance: %w", errUpdateImport))
 	}
-	if errUpdateInstance := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, StateImportFailed); errUpdateInstance != nil {
+	if errUpdateInstance := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, importapi.StateFailed); errUpdateInstance != nil {
 		additionalErrs = append(additionalErrs, fmt.Errorf("failed to update import job state: %w", errUpdateInstance))
 	}
 
