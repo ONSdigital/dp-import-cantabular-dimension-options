@@ -305,8 +305,9 @@ func TestClose(t *testing.T) {
 
 		// kafka consumer mock, sets consumerListening when StopListeningToConsumer is called
 		consumerMock := &kafkatest.IConsumerGroupMock{
-			StopAndWaitFunc: func() {
+			StopAndWaitFunc: func() error {
 				consumerListening = false
+				return nil
 			},
 			CloseFunc: func(ctx context.Context) error { return nil },
 		}
@@ -355,7 +356,7 @@ func TestClose(t *testing.T) {
 		})
 
 		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
-			consumerMock.StopAndWaitFunc = func() {}
+			consumerMock.StopAndWaitFunc = func() error { return nil }
 			consumerMock.CloseFunc = func(ctx context.Context) error {
 				return errKafkaConsumer
 			}

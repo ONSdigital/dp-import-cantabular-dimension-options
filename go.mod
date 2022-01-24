@@ -9,8 +9,7 @@ require (
 	github.com/ONSdigital/dp-component-test v0.6.3
 	github.com/ONSdigital/dp-healthcheck v1.2.3
 	github.com/ONSdigital/dp-import v1.2.1
-	github.com/ONSdigital/dp-kafka/v2 v2.4.3 // indirect
-	github.com/ONSdigital/dp-kafka/v3 v3.0.1
+	github.com/ONSdigital/dp-kafka/v3 v3.0.3-0.20220121174347-58528db13d73
 	github.com/ONSdigital/dp-net v1.2.0
 	github.com/ONSdigital/log.go/v2 v2.0.9
 	github.com/cucumber/godog v0.12.2
@@ -25,6 +24,7 @@ require (
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0 // indirect
+	github.com/ONSdigital/dp-kafka/v2 v2.2.0 // indirect
 	github.com/ONSdigital/dp-mongodb-in-memory v1.1.0 // indirect
 	github.com/Shopify/sarama v1.30.1 // indirect
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect

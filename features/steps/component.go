@@ -22,7 +22,7 @@ const (
 	ComponentTestGroup    = "component-test" // kafka group name for the component test consumer
 	DrainTopicTimeout     = 1 * time.Second  // maximum time to wait for a topic to be drained
 	DrainTopicMaxMessages = 1000             // maximum number of messages that will be drained from a topic
-	WaitEventTimeout      = 5 * time.Second  // maximum time that the component test consumer will wait for a kafka event
+	WaitEventTimeout      = 15 * time.Second // maximum time that the component test consumer will wait for a kafka event
 )
 
 var (
@@ -128,7 +128,7 @@ func (c *Component) initService(ctx context.Context) error {
 	// wait for producer to be initialised and consumer to be in consuming state
 	<-c.producer.Channels().Initialised
 	log.Info(ctx, "component-test kafka producer initialised")
-	<-c.consumer.Channels().State.Consuming
+	c.consumer.StateWait(kafka.Consuming)
 	log.Info(ctx, "component-test kafka consumer is in consuming state")
 
 	return nil

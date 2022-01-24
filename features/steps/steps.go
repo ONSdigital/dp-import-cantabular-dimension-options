@@ -20,10 +20,6 @@ import (
 
 const testETag = "13c7791bafdbaaf5e6660754feb1a58cd6aaa892"
 
-// // DimensionCompleteEventsTimeout is the maximum time that the testing producer will wait
-// // for DimensionComplete events to be produced before failing the test
-// var DimensionCompleteEventsTimeout = time.Second
-
 // RegisterSteps maps the human-readable regular expressions to their corresponding funcs
 func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the following instance with id "([^"]*)" is available from dp-dataset-api:$`, c.theFollowingInstanceIsAvailable)
