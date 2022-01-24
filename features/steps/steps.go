@@ -12,6 +12,7 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/cucumber/godog"
 	"github.com/google/go-cmp/cmp"
@@ -47,8 +48,7 @@ func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
 // note that this step should be called only after all dependencies have been setup,
 // to prevent any race condition, specially during the first healthcheck iteration.
 func (c *Component) theServiceStarts() error {
-	c.wg.Add(1)
-	go c.startService(c.ctx)
+	c.startService(c.ctx)
 	return nil
 }
 
@@ -225,6 +225,9 @@ func (c *Component) theseInstanceCompleteEventsAreProduced(events *godog.Table) 
 	var got []*event.InstanceComplete
 	listen := true
 
+	c.consumer.StateWait(kafka.Consuming)
+	log.Info(c.ctx, "component test consumer is consuming")
+
 	for listen {
 		select {
 		case <-time.After(WaitEventTimeout):
@@ -261,6 +264,9 @@ func (c *Component) theseInstanceCompleteEventsAreProduced(events *godog.Table) 
 
 func (c *Component) noInstanceCompleteEventsShouldBeProduced() error {
 	listen := true
+
+	c.consumer.StateWait(kafka.Consuming)
+	log.Info(c.ctx, "component test consumer is consuming")
 
 	for listen {
 		select {

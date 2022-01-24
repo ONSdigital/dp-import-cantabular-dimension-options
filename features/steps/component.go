@@ -20,9 +20,9 @@ import (
 
 const (
 	ComponentTestGroup    = "component-test" // kafka group name for the component test consumer
-	DrainTopicTimeout     = 1 * time.Second  // maximum time to wait for a topic to be drained
+	DrainTopicTimeout     = 5 * time.Second  // maximum time to wait for a topic to be drained
 	DrainTopicMaxMessages = 1000             // maximum number of messages that will be drained from a topic
-	WaitEventTimeout      = 15 * time.Second // maximum time that the component test consumer will wait for a kafka event
+	WaitEventTimeout      = 20 * time.Second // maximum time that the component test consumer will wait for a kafka event
 )
 
 var (
@@ -135,21 +135,25 @@ func (c *Component) initService(ctx context.Context) error {
 }
 
 func (c *Component) startService(ctx context.Context) {
-	defer c.wg.Done()
 	c.svc.Start(c.ctx, c.errorChan)
 
-	// blocks until an os interrupt or a fatal error occurs
-	select {
-	case err := <-c.errorChan:
-		err = fmt.Errorf("service error received: %w", err)
-		c.svc.Close(ctx)
-		panic(fmt.Errorf("unexpected error received from errorChan: %w", err))
-	case sig := <-c.signals:
-		log.Info(ctx, "os signal received", log.Data{"signal": sig})
-	}
-	if err := c.svc.Close(ctx); err != nil {
-		panic(fmt.Errorf("unexpected error during service graceful shutdown: %w", err))
-	}
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+
+		// blocks until an os interrupt or a fatal error occurs
+		select {
+		case err := <-c.errorChan:
+			err = fmt.Errorf("service error received: %w", err)
+			c.svc.Close(ctx)
+			panic(fmt.Errorf("unexpected error received from errorChan: %w", err))
+		case sig := <-c.signals:
+			log.Info(ctx, "os signal received", log.Data{"signal": sig})
+		}
+		if err := c.svc.Close(ctx); err != nil {
+			panic(fmt.Errorf("unexpected error during service graceful shutdown: %w", err))
+		}
+	}()
 }
 
 // drainTopic drains the provided topic and group of any residual messages between scenarios.
@@ -164,15 +168,6 @@ func (c *Component) startService(ctx context.Context) {
 // until the topic is drained (or time out expires)
 func (c *Component) drainTopic(ctx context.Context, topic, group string, wg *sync.WaitGroup) error {
 	msgs := []kafka.Message{}
-
-	defer func() {
-		log.Info(ctx, "drained topic", log.Data{
-			"len":      len(msgs),
-			"messages": msgs,
-			"topic":    topic,
-			"group":    group,
-		})
-	}()
 
 	kafkaOffset := kafka.OffsetOldest
 	batchSize := DrainTopicMaxMessages
@@ -210,16 +205,32 @@ func (c *Component) drainTopic(ctx context.Context, topic, group string, wg *syn
 	// start kafka logging go-routines
 	consumer.LogErrors(ctx)
 
-	// waitUntilDrained is a func that will wait until the batch is consumed or the timeout expires
+	// waitUntilDrained is a func that will wait until the batch is consumed or the timeout expires, once 'Consuming' state is reached
 	// (with 100 ms of extra time to allow any in-flight drain)
 	waitUntilDrained := func() {
+		consumer.StateWait(kafka.Consuming)
+		log.Info(ctx, "drainer is consuming", log.Data{"topic": topic, "group": group})
+
 		select {
 		case <-time.After(DrainTopicTimeout + 100*time.Millisecond):
 		case <-drained:
 		}
 
-		consumer.Close(ctx)
+		defer func() {
+			log.Info(ctx, "drained topic", log.Data{
+				"len":      len(msgs),
+				"messages": msgs,
+				"topic":    topic,
+				"group":    group,
+			})
+		}()
+
+		if err := consumer.Close(ctx); err != nil {
+			log.Warn(ctx, "error closing drainer", log.Data{"topic": topic, "group": group, "err": err})
+		}
+
 		<-consumer.Channels().Closed
+		log.Info(ctx, "drainer is closed", log.Data{"topic": topic, "group": group})
 	}
 
 	// sync wait if wg is not provided
