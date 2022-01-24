@@ -1,6 +1,7 @@
 package steps
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
 	"github.com/ONSdigital/log.go/v2/log"
@@ -26,13 +28,14 @@ const testETag = "13c7791bafdbaaf5e6660754feb1a58cd6aaa892"
 func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the following instance with id "([^"]*)" is available from dp-dataset-api:$`, c.theFollowingInstanceIsAvailable)
 	ctx.Step(`^([^"]*) out of ([^"]*) dimensions have been processed for instance "([^"]*)" and job "([^"]*)"`, c.theCallToIncreaseProcessedInstanceIsSuccessful)
-	ctx.Step(`^the following response is available from Cantabular from the codebook "([^"]*)" and query "([^"]*)":$`, c.theFollowingCodebookIsAvailable)
+	ctx.Step(`^the following categories query response is available from Cantabular api extension for the dataset "([^"]*)" and variable "([^"]*)":$`, c.theFollowingCantabularCategoriesAreAvailable)
 
 	ctx.Step(`^the service starts`, c.theServiceStarts)
 	ctx.Step(`^dp-dataset-api is healthy`, c.datasetAPIIsHealthy)
 	ctx.Step(`^dp-dataset-api is unhealthy`, c.datasetAPIIsUnhealthy)
 	ctx.Step(`^dp-import-api is healthy`, c.importAPIIsHealthy)
 	ctx.Step(`^cantabular server is healthy`, c.cantabularServerIsHealthy)
+	ctx.Step(`^cantabular api extension is healthy`, c.cantabularAPIExtIsHealthy)
 
 	ctx.Step(`^the call to add a dimension to the instance with id "([^"]*)" is successful`, c.theCallToAddInstanceDimensionIsSuccessful)
 	ctx.Step(`^the call to add a dimension to the instance with id "([^"]*)" is unsuccessful`, c.theCallToAddInstanceDimensionIsUnsuccessful)
@@ -93,6 +96,16 @@ func (c *Component) cantabularServerIsHealthy() error {
 	return nil
 }
 
+// cantabularApiExtIsHealthy generates a mocked healthy response for cantabular server
+func (c *Component) cantabularAPIExtIsHealthy() error {
+	const res = `{"status": "OK"}`
+	c.CantabularApiExt.NewHandler().
+		Get("/graphql?query={}").
+		Reply(http.StatusOK).
+		BodyString(res)
+	return nil
+}
+
 // theFollowingInstanceIsAvailable generate a mocked response for dataset API
 // GET /instances/{id} with the provided instance response
 func (c *Component) theFollowingInstanceIsAvailable(id string, instance *godog.DocString) error {
@@ -107,9 +120,24 @@ func (c *Component) theFollowingInstanceIsAvailable(id string, instance *godog.D
 
 // theFollowingCodebookIsAvailable generates a mocked response for Cantabular Server
 // GET /v9/codebook/{name} with the provided query
-func (c *Component) theFollowingCodebookIsAvailable(name, q string, cb *godog.DocString) error {
-	c.CantabularSrv.NewHandler().
-		Get("/v9/codebook/" + name + q).
+func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string, variable string, cb *godog.DocString) error {
+	// Encode the graphQL query with the provided dataset and variables
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	if err := enc.Encode(map[string]interface{}{
+		"query": cantabular.QueryDimensionOptions,
+		"variables": map[string]interface{}{
+			"dataset":   dataset,
+			"variables": []string{variable},
+		},
+	}); err != nil {
+		return fmt.Errorf("failed to encode GraphQL query: %w", err)
+	}
+
+	// create graphql handler with expected query body
+	c.CantabularApiExt.NewHandler().
+		Post("/graphql").
+		AssertBody(b.Bytes()).
 		Reply(http.StatusOK).
 		BodyString(cb.Content)
 
