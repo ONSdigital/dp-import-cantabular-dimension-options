@@ -213,7 +213,9 @@ func (c *Component) drainTopic(ctx context.Context, topic, group string, wg *syn
 
 		select {
 		case <-time.After(DrainTopicTimeout + 100*time.Millisecond):
+			log.Info(ctx, "drain timeout has expired")
 		case <-drained:
+			log.Info(ctx, "message(s) have been drained")
 		}
 
 		defer func() {

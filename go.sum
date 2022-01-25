@@ -56,8 +56,8 @@ github.com/ONSdigital/dp-import v1.2.1 h1:IySfrNsrsWaqFAVgZSaOEaE5StVUJ1TJIZgVAF
 github.com/ONSdigital/dp-import v1.2.1/go.mod h1:WTsFDrvob+eTEj/JIuzUWdwLhHPRf3KETVDT9fEK+88=
 github.com/ONSdigital/dp-kafka/v2 v2.2.0 h1:4s9VfmUxi70WpaRZk/CbxDNGqcJTsNTE9aLaLgcn4n4=
 github.com/ONSdigital/dp-kafka/v2 v2.2.0/go.mod h1:lFw9GGYpW8N6dG7g2wLQgCJL9vpo17RvOzCsdMRCapQ=
-github.com/ONSdigital/dp-kafka/v3 v3.0.3-0.20220124162708-9529f4b9ec5b h1:1sM9vSUpAekA2VNxA5e2X/a5+VlXsCFrA6o1ifvbs7s=
-github.com/ONSdigital/dp-kafka/v3 v3.0.3-0.20220124162708-9529f4b9ec5b/go.mod h1:gUor77tPx4VxT7OjZzAUCc7eeNcmLbaaaBp3WFJg52E=
+github.com/ONSdigital/dp-kafka/v3 v3.1.0 h1:S001DHNY4WD/EXaHxtyuIoSoSzXIjDmNwXqPI8k2JZU=
+github.com/ONSdigital/dp-kafka/v3 v3.1.0/go.mod h1:gUor77tPx4VxT7OjZzAUCc7eeNcmLbaaaBp3WFJg52E=
 github.com/ONSdigital/dp-mocking v0.0.0-20190905163309-fee2702ad1b9 h1:+WXVfTDyWXY1DQRDFSmt1b/ORKk5c7jGiPu7NoeaM/0=
 github.com/ONSdigital/dp-mocking v0.0.0-20190905163309-fee2702ad1b9/go.mod h1:BcIRgitUju//qgNePRBmNjATarTtynAgc0yV29VpLEk=
 github.com/ONSdigital/dp-mongodb-in-memory v1.1.0 h1:EjUU1zpIU1LElhiTMAG7qxy7Rq9+VTUtt3/lyA+K7jI=
