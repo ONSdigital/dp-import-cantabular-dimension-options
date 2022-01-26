@@ -101,10 +101,14 @@ func runConsumerGroup(ctx context.Context, cfg *config.Config) (*kafka.ConsumerG
 	}
 
 	// register handler to log events
-	cg.RegisterHandler(ctx, handle)
+	if err := cg.RegisterHandler(ctx, handle); err != nil {
+		return nil, err
+	}
 
 	// start consuming as soon as possible
-	cg.Start()
+	if cg.Start(); err != nil {
+		return nil, err
+	}
 
 	// go-routine to log errors from error channel
 	cg.LogErrors(ctx)

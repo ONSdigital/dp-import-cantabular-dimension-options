@@ -9,7 +9,7 @@ require (
 	github.com/ONSdigital/dp-component-test v0.6.3
 	github.com/ONSdigital/dp-healthcheck v1.2.3
 	github.com/ONSdigital/dp-import v1.2.1
-	github.com/ONSdigital/dp-kafka/v3 v3.1.0
+	github.com/ONSdigital/dp-kafka/v3 v3.1.1-0.20220125160335-0ea059973ba1
 	github.com/ONSdigital/dp-net v1.2.0
 	github.com/ONSdigital/log.go/v2 v2.0.9
 	github.com/cucumber/godog v0.12.2

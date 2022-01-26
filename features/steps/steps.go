@@ -48,8 +48,7 @@ func (c *Component) RegisterSteps(ctx *godog.ScenarioContext) {
 // note that this step should be called only after all dependencies have been setup,
 // to prevent any race condition, specially during the first healthcheck iteration.
 func (c *Component) theServiceStarts() error {
-	c.startService(c.ctx)
-	return nil
+	return c.startService(c.ctx)
 }
 
 // datasetAPIIsHealthy generates a mocked healthy response for dataset API healthecheck
