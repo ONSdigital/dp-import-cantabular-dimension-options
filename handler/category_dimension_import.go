@@ -88,9 +88,9 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg 
 		return err
 	}
 
-	resp, err := h.ctblr.GetDimensionOptions(ctx, cantabular.StaticDatasetQueryRequest{
-		Dataset:   e.CantabularBlob,
-		Variables: []string{e.DimensionID},
+	resp, err := h.ctblr.GetDimensionOptions(ctx, cantabular.GetDimensionOptionsRequest{
+		Dataset:        e.CantabularBlob,
+		DimensionNames: []string{e.DimensionID},
 	})
 	if err != nil {
 		// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.

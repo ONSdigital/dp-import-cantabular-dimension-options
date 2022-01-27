@@ -16,7 +16,7 @@ services:
         depends_on:
             - kafka-1
         ports:
-            - 26200:26200
+            - "26200:26200"
         environment:
             BIND_ADDR:                          ":26200"
             SERVICE_AUTH_TOKEN:                 "testToken"

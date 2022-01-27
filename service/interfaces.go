@@ -33,7 +33,7 @@ type HealthChecker interface {
 
 // CantabularClient defines the required CantabularClient methods
 type CantabularClient interface {
-	GetDimensionOptions(ctx context.Context, req cantabular.StaticDatasetQueryRequest) (*cantabular.GetDimensionOptionsResponse, error)
+	GetDimensionOptions(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
 	Checker(context.Context, *healthcheck.CheckState) error
 	CheckerAPIExt(ctx context.Context, state *healthcheck.CheckState) error
 }

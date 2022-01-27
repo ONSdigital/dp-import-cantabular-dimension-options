@@ -112,7 +112,7 @@ func (c *Component) initService(ctx context.Context) error {
 
 	// start consumer group
 	if err := c.consumer.Start(); err != nil {
-		log.Error(c.ctx, "error starting kafka drainer", err)
+		log.Error(ctx, "error starting kafka drainer", err)
 	}
 
 	// start kafka logging go-routines
@@ -121,7 +121,7 @@ func (c *Component) initService(ctx context.Context) error {
 
 	// Create service and initialise it
 	c.svc = service.New()
-	if err = c.svc.Init(c.ctx, cfg, BuildTime, GitCommit, Version); err != nil {
+	if err = c.svc.Init(ctx, cfg, BuildTime, GitCommit, Version); err != nil {
 		return fmt.Errorf("unexpected service Init error in NewComponent: %w", err)
 	}
 
@@ -137,7 +137,7 @@ func (c *Component) initService(ctx context.Context) error {
 }
 
 func (c *Component) startService(ctx context.Context) error {
-	if err := c.svc.Start(c.ctx, c.errorChan); err != nil {
+	if err := c.svc.Start(ctx, c.errorChan); err != nil {
 		return fmt.Errorf("unexpected error while starting service: %w", err)
 	}
 
@@ -149,7 +149,7 @@ func (c *Component) startService(ctx context.Context) error {
 		select {
 		case err := <-c.errorChan:
 			if errClose := c.svc.Close(ctx); errClose != nil {
-				log.Warn(c.ctx, "error closing server during error handing", log.Data{"close_error": errClose})
+				log.Warn(ctx, "error closing server during error handing", log.Data{"close_error": errClose})
 			}
 			panic(fmt.Errorf("unexpected error received from errorChan: %w", err))
 		case sig := <-c.signals:
