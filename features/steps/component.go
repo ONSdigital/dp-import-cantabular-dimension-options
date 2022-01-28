@@ -209,7 +209,7 @@ func (c *Component) drainTopic(ctx context.Context, topic, group string, wg *syn
 	}
 
 	// start drainer consumer group
-	if drainer.Start(); err != nil {
+	if err = drainer.Start(); err != nil {
 		return fmt.Errorf("error starting kafka consumer: %w", err)
 	}
 

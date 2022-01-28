@@ -106,7 +106,7 @@ func runConsumerGroup(ctx context.Context, cfg *config.Config) (*kafka.ConsumerG
 	}
 
 	// start consuming as soon as possible
-	if cg.Start(); err != nil {
+	if err := cg.Start(); err != nil {
 		return nil, err
 	}
 

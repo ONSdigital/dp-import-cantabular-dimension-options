@@ -91,7 +91,7 @@ func (c *Component) cantabularServerIsHealthy() error {
 	return nil
 }
 
-// cantabularApiExtIsHealthy generates a mocked healthy response for cantabular server
+// cantabularAPIExtIsHealthy generates a mocked healthy response for cantabular server
 func (c *Component) cantabularAPIExtIsHealthy() error {
 	const res = `{"status": "OK"}`
 	c.CantabularApiExt.NewHandler().
@@ -113,7 +113,7 @@ func (c *Component) theFollowingInstanceIsAvailable(id string, instance *godog.D
 	return nil
 }
 
-// theFollowingCodebookIsAvailable generates a mocked response for Cantabular Server
+// theFollowingCantabularCategoriesAreAvailable generates a mocked response for Cantabular Server
 // GET /v9/codebook/{name} with the provided query
 func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string, variable string, cb *godog.DocString) error {
 	// Encode the graphQL query with the provided dataset and variables
