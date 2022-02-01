@@ -4,6 +4,7 @@ Feature: Import-Cantabular-Dimension-Options-Unhealthy
     Given dp-dataset-api is unhealthy
     And dp-import-api is healthy
     And cantabular server is healthy
+    And cantabular api extension is healthy
   
   Scenario: Not consuming category-dimension-import events, because a dependency is not healthy
     When the service starts

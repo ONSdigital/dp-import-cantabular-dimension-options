@@ -175,20 +175,22 @@ func TestInit(t *testing.T) {
 				So(svc.Server, ShouldResemble, serverMock)
 
 				Convey("And all checks are registered", func() {
-					So(hcMock.AddAndGetCheckCalls(), ShouldHaveLength, 5)
+					So(hcMock.AddAndGetCheckCalls(), ShouldHaveLength, 6)
 					So(hcMock.AddAndGetCheckCalls()[0].Name, ShouldResemble, "Kafka consumer")
 					So(hcMock.AddAndGetCheckCalls()[1].Name, ShouldResemble, "Kafka producer")
-					So(hcMock.AddAndGetCheckCalls()[2].Name, ShouldResemble, "Cantabular")
-					So(hcMock.AddAndGetCheckCalls()[3].Name, ShouldResemble, "Dataset API")
-					So(hcMock.AddAndGetCheckCalls()[4].Name, ShouldResemble, "Import API")
+					So(hcMock.AddAndGetCheckCalls()[2].Name, ShouldResemble, "Cantabular server")
+					So(hcMock.AddAndGetCheckCalls()[3].Name, ShouldResemble, "Cantabular API Extension")
+					So(hcMock.AddAndGetCheckCalls()[4].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddAndGetCheckCalls()[5].Name, ShouldResemble, "Import API")
 				})
 
 				Convey("Then kafka consumer subscribes to the expected healthcheck checks", func() {
-					So(subscribedTo, ShouldHaveLength, 4)
+					So(subscribedTo, ShouldHaveLength, 5)
 					So(subscribedTo[0], ShouldEqual, testChecks["Kafka producer"])
-					So(subscribedTo[1], ShouldEqual, testChecks["Cantabular"])
-					So(subscribedTo[2], ShouldEqual, testChecks["Dataset API"])
-					So(subscribedTo[3], ShouldEqual, testChecks["Import API"])
+					So(subscribedTo[1], ShouldEqual, testChecks["Cantabular server"])
+					So(subscribedTo[2], ShouldEqual, testChecks["Cantabular API Extension"])
+					So(subscribedTo[3], ShouldEqual, testChecks["Dataset API"])
+					So(subscribedTo[4], ShouldEqual, testChecks["Import API"])
 				})
 
 				Convey("And the kafka handler is registered to the consumer", func() {
@@ -247,7 +249,8 @@ func TestStart(t *testing.T) {
 				return nil
 			}
 			serverWg.Add(1)
-			svc.Start(ctx, make(chan error, 1))
+			err := svc.Start(ctx, make(chan error, 1))
+			So(err, ShouldBeNil)
 
 			Convey("Then healthcheck is started and HTTP server starts listening", func() {
 				So(len(hcMock.StartCalls()), ShouldEqual, 1)
@@ -263,7 +266,8 @@ func TestStart(t *testing.T) {
 			}
 			errChan := make(chan error, 1)
 			serverWg.Add(1)
-			svc.Start(ctx, errChan)
+			err := svc.Start(ctx, errChan)
+			So(err, ShouldBeNil)
 
 			Convey("Then HTTP server errors are reported to the provided errors channel", func() {
 				rxErr := <-errChan
@@ -283,7 +287,8 @@ func TestStart(t *testing.T) {
 				return nil
 			}
 			serverWg.Add(1)
-			svc.Start(ctx, make(chan error, 1))
+			err := svc.Start(ctx, make(chan error, 1))
+			So(err, ShouldBeNil)
 
 			Convey("Then the kafka consumer is started", func() {
 				So(consumerMock.StartCalls(), ShouldHaveLength, 1)
@@ -303,8 +308,9 @@ func TestClose(t *testing.T) {
 
 		// kafka consumer mock, sets consumerListening when StopListeningToConsumer is called
 		consumerMock := &kafkatest.IConsumerGroupMock{
-			StopAndWaitFunc: func() {
+			StopAndWaitFunc: func() error {
 				consumerListening = false
+				return nil
 			},
 			CloseFunc: func(ctx context.Context) error { return nil },
 		}
@@ -353,7 +359,7 @@ func TestClose(t *testing.T) {
 		})
 
 		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
-			consumerMock.StopAndWaitFunc = func() {}
+			consumerMock.StopAndWaitFunc = func() error { return nil }
 			consumerMock.CloseFunc = func(ctx context.Context) error {
 				return errKafkaConsumer
 			}

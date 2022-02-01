@@ -20,10 +20,11 @@ var componentFlag = flag.Bool("component", false, "perform component tests")
 
 type ComponentTest struct {
 	MongoFeature *componenttest.MongoFeature
+	t            testing.TB
 }
 
 func (f *ComponentTest) InitializeScenario(ctx *godog.ScenarioContext) {
-	component := steps.NewComponent()
+	component := steps.NewComponent(f.t)
 
 	ctx.BeforeScenario(func(*godog.Scenario) {
 		if err := component.Reset(); err != nil {
@@ -59,7 +60,11 @@ func TestComponent(t *testing.T) {
 				t.Fatalf("could not create logs file: %s", err)
 			}
 
-			defer logfile.Close()
+			defer func() {
+				if err := logfile.Close(); err != nil {
+					t.Fatalf("failed to close logs file: %s", err)
+				}
+			}()
 			output = logfile
 		}
 
@@ -69,7 +74,7 @@ func TestComponent(t *testing.T) {
 			Paths:  flag.Args(),
 		}
 
-		f := &ComponentTest{}
+		f := &ComponentTest{t: t}
 
 		status = godog.TestSuite{
 			Name:                 "feature_tests",

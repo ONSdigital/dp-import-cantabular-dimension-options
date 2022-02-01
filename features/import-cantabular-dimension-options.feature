@@ -4,30 +4,38 @@ Feature: Import-Cantabular-Dimension-Options
     Given dp-dataset-api is healthy
     And dp-import-api is healthy
     And cantabular server is healthy
-    And the following response is available from Cantabular from the codebook "Example" and query "?cats=true&v=dimension-01":
+    And cantabular api extension is healthy
+    And the following categories query response is available from Cantabular api extension for the dataset "Example" and variable "dimension-01":
       """
       {
-        "dataset": {
-          "name": "Example",
-          "size": 5
-        },
-        "codebook": [
-          {
-            "name": "dimension-01",
-            "label": "Dimension 01",
-            "len": 3,
-            "codes": [
-              "0",
-              "1",
-              "2"
-            ],
-            "labels": [
-              "London",
-              "Liverpool",
-              "Belfast"
-            ]
+        "data": {
+          "dataset": {
+            "table": {
+              "dimensions": [
+                {
+                  "categories": [
+                    {
+                      "code": "0",
+                      "label": "London"
+                    },
+                    {
+                      "code": "1",
+                      "label": "Liverpool"
+                    },
+                    {
+                      "code": "2",
+                      "label": "Belfast"
+                    }
+                  ],
+                  "variable": {
+                    "label": "Dimension 01",
+                    "name": "dimension-01"
+                  }
+                }
+              ]
+            }
           }
-        ]
+        }
       }
       """
     And the following instance with id "instance-happy-01" is available from dp-dataset-api:

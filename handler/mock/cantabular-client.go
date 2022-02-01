@@ -20,8 +20,8 @@ var _ handler.CantabularClient = &CantabularClientMock{}
 //
 // 		// make and configure a mocked handler.CantabularClient
 // 		mockedCantabularClient := &CantabularClientMock{
-// 			GetCodebookFunc: func(contextMoqParam context.Context, getCodebookRequest cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
-// 				panic("mock out the GetCodebook method")
+// 			GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+// 				panic("mock out the GetDimensionOptions method")
 // 			},
 // 		}
 //
@@ -30,53 +30,53 @@ var _ handler.CantabularClient = &CantabularClientMock{}
 //
 // 	}
 type CantabularClientMock struct {
-	// GetCodebookFunc mocks the GetCodebook method.
-	GetCodebookFunc func(contextMoqParam context.Context, getCodebookRequest cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error)
+	// GetDimensionOptionsFunc mocks the GetDimensionOptions method.
+	GetDimensionOptionsFunc func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// GetCodebook holds details about calls to the GetCodebook method.
-		GetCodebook []struct {
-			// ContextMoqParam is the contextMoqParam argument value.
-			ContextMoqParam context.Context
-			// GetCodebookRequest is the getCodebookRequest argument value.
-			GetCodebookRequest cantabular.GetCodebookRequest
+		// GetDimensionOptions holds details about calls to the GetDimensionOptions method.
+		GetDimensionOptions []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Req is the req argument value.
+			Req cantabular.GetDimensionOptionsRequest
 		}
 	}
-	lockGetCodebook sync.RWMutex
+	lockGetDimensionOptions sync.RWMutex
 }
 
-// GetCodebook calls GetCodebookFunc.
-func (mock *CantabularClientMock) GetCodebook(contextMoqParam context.Context, getCodebookRequest cantabular.GetCodebookRequest) (*cantabular.GetCodebookResponse, error) {
-	if mock.GetCodebookFunc == nil {
-		panic("CantabularClientMock.GetCodebookFunc: method is nil but CantabularClient.GetCodebook was just called")
+// GetDimensionOptions calls GetDimensionOptionsFunc.
+func (mock *CantabularClientMock) GetDimensionOptions(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+	if mock.GetDimensionOptionsFunc == nil {
+		panic("CantabularClientMock.GetDimensionOptionsFunc: method is nil but CantabularClient.GetDimensionOptions was just called")
 	}
 	callInfo := struct {
-		ContextMoqParam    context.Context
-		GetCodebookRequest cantabular.GetCodebookRequest
+		Ctx context.Context
+		Req cantabular.GetDimensionOptionsRequest
 	}{
-		ContextMoqParam:    contextMoqParam,
-		GetCodebookRequest: getCodebookRequest,
+		Ctx: ctx,
+		Req: req,
 	}
-	mock.lockGetCodebook.Lock()
-	mock.calls.GetCodebook = append(mock.calls.GetCodebook, callInfo)
-	mock.lockGetCodebook.Unlock()
-	return mock.GetCodebookFunc(contextMoqParam, getCodebookRequest)
+	mock.lockGetDimensionOptions.Lock()
+	mock.calls.GetDimensionOptions = append(mock.calls.GetDimensionOptions, callInfo)
+	mock.lockGetDimensionOptions.Unlock()
+	return mock.GetDimensionOptionsFunc(ctx, req)
 }
 
-// GetCodebookCalls gets all the calls that were made to GetCodebook.
+// GetDimensionOptionsCalls gets all the calls that were made to GetDimensionOptions.
 // Check the length with:
-//     len(mockedCantabularClient.GetCodebookCalls())
-func (mock *CantabularClientMock) GetCodebookCalls() []struct {
-	ContextMoqParam    context.Context
-	GetCodebookRequest cantabular.GetCodebookRequest
+//     len(mockedCantabularClient.GetDimensionOptionsCalls())
+func (mock *CantabularClientMock) GetDimensionOptionsCalls() []struct {
+	Ctx context.Context
+	Req cantabular.GetDimensionOptionsRequest
 } {
 	var calls []struct {
-		ContextMoqParam    context.Context
-		GetCodebookRequest cantabular.GetCodebookRequest
+		Ctx context.Context
+		Req cantabular.GetDimensionOptionsRequest
 	}
-	mock.lockGetCodebook.RLock()
-	calls = mock.calls.GetCodebook
-	mock.lockGetCodebook.RUnlock()
+	mock.lockGetDimensionOptions.RLock()
+	calls = mock.calls.GetDimensionOptions
+	mock.lockGetDimensionOptions.RUnlock()
 	return calls
 }

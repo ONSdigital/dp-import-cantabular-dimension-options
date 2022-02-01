@@ -26,6 +26,7 @@ func TestConfig(t *testing.T) {
 				So(cfg.HealthCheckCriticalTimeout, ShouldEqual, 90*time.Second)
 				So(cfg.DatasetAPIURL, ShouldEqual, "http://localhost:22000")
 				So(cfg.CantabularURL, ShouldEqual, "http://localhost:8491")
+				So(cfg.CantabularExtURL, ShouldEqual, "http://localhost:8492")
 				So(cfg.ImportAPIURL, ShouldEqual, "http://localhost:21800")
 				So(cfg.CantabularHealthcheckEnabled, ShouldBeTrue)
 				So(cfg.ServiceAuthToken, ShouldEqual, "")

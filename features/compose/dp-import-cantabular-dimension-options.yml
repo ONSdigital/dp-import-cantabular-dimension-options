@@ -1,4 +1,5 @@
 version: '3.3'
+
 services:
     dp-import-cantabular-dimension-options:
         build:
@@ -8,19 +9,20 @@ services:
             - go 
             - test 
             - -cover 
+            - -race
             - -coverpkg=github.com/ONSdigital/dp-import-cantabular-dimension-options/... 
             - -component
         volumes:
             - ../../:/dp-import-cantabular-dimension-options
         depends_on:
-            - kafka
+            - kafka-1
         ports:
-            - 26200:26200
+            - "26200:26200"
         environment:
             BIND_ADDR:                          ":26200"
             SERVICE_AUTH_TOKEN:                 "testToken"
             COMPONENT_TEST_USE_LOG_FILE:        "${COMPONENT_TEST_USE_LOG_FILE-false}"
-            KAFKA_ADDR:                         "kafka:9092"
+            KAFKA_ADDR:                         "kafka-1:9092"
             KAFKA_CONSUMER_MIN_BROKERS_HEALTHY: 1
             KAFKA_PRODUCER_MIN_BROKERS_HEALTHY: 1
             KAFKA_SEC_PROTO:                    ""
