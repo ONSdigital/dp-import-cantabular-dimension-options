@@ -97,14 +97,14 @@ func TestHandle(t *testing.T) {
 						Option:   "code1",
 						Label:    "Code 1",
 						CodeList: "test-variable",
-						Name:     "test-variable",
+						Name:     "Test Variable",
 					},
 					{
 						Code:     "code2",
 						Option:   "code2",
 						Label:    "Code 2",
 						CodeList: "test-variable",
-						Name:     "test-variable",
+						Name:     "Test Variable",
 					},
 				})
 
@@ -117,7 +117,7 @@ func TestHandle(t *testing.T) {
 						Option:   "code3",
 						Label:    "Code 3",
 						CodeList: "test-variable",
-						Name:     "test-variable",
+						Name:     "Test Variable",
 					},
 				})
 			})
@@ -327,14 +327,14 @@ func TestHandle(t *testing.T) {
 						Option:   "code1",
 						Label:    "Code 1",
 						CodeList: "test-variable",
-						Name:     "test-variable",
+						Name:     "Test Variable",
 					},
 					{
 						Code:     "code2",
 						Option:   "code2",
 						Label:    "Code 2",
 						CodeList: "test-variable",
-						Name:     "test-variable",
+						Name:     "Test Variable",
 					},
 				})
 
@@ -347,7 +347,7 @@ func TestHandle(t *testing.T) {
 						Option:   "code3",
 						Label:    "Code 3",
 						CodeList: "test-variable",
-						Name:     "test-variable",
+						Name:     "Test Variable",
 					},
 				})
 
@@ -360,7 +360,7 @@ func TestHandle(t *testing.T) {
 						Option:   "code3",
 						Label:    "Code 3",
 						CodeList: "test-variable",
-						Name:     "test-variable",
+						Name:     "Test Variable",
 					},
 				})
 			})

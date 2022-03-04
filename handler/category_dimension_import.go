@@ -155,7 +155,7 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 		optionsBatch := make([]*dataset.OptionPost, size)
 		for j := 0; j < size; j++ {
 			optionsBatch[j] = &dataset.OptionPost{
-				Name:     dim.Variable.Name,
+				Name:     dim.Variable.Label,
 				CodeList: dim.Variable.Name,             // TODO can we assume this?
 				Code:     dim.Categories[offset+j].Code, // TODO can we assume this?
 				Option:   dim.Categories[offset+j].Code,
