@@ -88,29 +88,31 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg 
 		return err
 	}
 
-	resp, err := h.ctblr.GetDimensionOptions(ctx, cantabular.GetDimensionOptionsRequest{
-		Dataset:        e.CantabularBlob,
-		DimensionNames: []string{e.DimensionID},
-	})
-	if err != nil {
-		// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.
-		// TODO we might want to retry this, once retries are implemented
-		return h.setImportToFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
-	}
+	if !e.IsGeography {
+		resp, err := h.ctblr.GetDimensionOptions(ctx, cantabular.GetDimensionOptionsRequest{
+			Dataset:        e.CantabularBlob,
+			DimensionNames: []string{e.DimensionID},
+		})
+		if err != nil {
+			// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.
+			// TODO we might want to retry this, once retries are implemented
+			return h.setImportToFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
+		}
 
-	// validate that there is exactly one Dataset in the response
-	if resp == nil || len(resp.Dataset.Table.Dimensions) != 1 {
-		logData["response"] = resp
-		err := NewError(errors.New("unexpected response from Cantabular server"), logData)
-		// set instance state to failed because cantabular response is invalid and the import process will be aborted.
-		return h.setImportToFailed(ctx, err, e)
-	}
+		// validate that there is exactly one Dataset in the response
+		if resp == nil || len(resp.Dataset.Table.Dimensions) != 1 {
+			logData["response"] = resp
+			err := NewError(errors.New("unexpected response from Cantabular server"), logData)
+			// set instance state to failed because cantabular response is invalid and the import process will be aborted.
+			return h.setImportToFailed(ctx, err, e)
+		}
 
-	// send variable values to dataset api in batches
-	dim := resp.Dataset.Table.Dimensions[0]
-	eTag, err = h.BatchPatchInstance(ctx, e, dim, eTag)
-	if err != nil {
-		return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
+		// send variable values to dataset api in batches
+		dim := resp.Dataset.Table.Dimensions[0]
+		eTag, err = h.BatchPatchInstance(ctx, e, dim, eTag)
+		if err != nil {
+			return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
+		}
 	}
 
 	log.Info(ctx, "successfully sent all dimension options to dataset api for a dimension", logData)

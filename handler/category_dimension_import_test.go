@@ -44,6 +44,7 @@ var (
 		JobID:          testJobID,
 		DimensionID:    "test-variable",
 		CantabularBlob: testBlob,
+		IsGeography:    false,
 	}
 )
 
@@ -120,6 +121,37 @@ func TestHandle(t *testing.T) {
 						Name:     "Test Variable",
 					},
 				})
+			})
+
+			Convey("Then we do not sleep between calls", func() {
+				So(sleepRandomCalls, ShouldHaveLength, 0)
+			})
+		})
+
+		Convey("When Handle is successfully triggered with only Geography codelists", func(c C) {
+			e := &event.CategoryDimensionImport{
+				InstanceID:     testInstanceID,
+				JobID:          testJobID,
+				DimensionID:    "test-variable",
+				CantabularBlob: testBlob,
+				IsGeography:    true,
+			}
+			msg := kafkaMessage(c, e)
+			err := eventHandler.Handle(ctx, workerID, msg)
+			So(err, ShouldBeNil)
+
+			Convey("Then the corresponding codebook obtained from cantabular should not have Dimension Options", func() {
+				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 0)
+			})
+
+			Convey("Then the corresponding instance is obtained from dataset API", func() {
+				So(datasetAPIClient.GetInstanceCalls(), ShouldHaveLength, 1)
+				So(datasetAPIClient.GetInstanceCalls()[0].InstanceID, ShouldEqual, testInstanceID)
+				So(datasetAPIClient.GetInstanceCalls()[0].IfMatch, ShouldEqual, headers.IfMatchAnyETag)
+			})
+
+			Convey("Then no patch calls are performed to Dataset API", func() {
+				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 0)
 			})
 
 			Convey("Then we do not sleep between calls", func() {
