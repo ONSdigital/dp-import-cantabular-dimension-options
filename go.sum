@@ -54,6 +54,10 @@ github.com/ONSdigital/dp-healthcheck v1.2.3 h1:8/qTe0TjXouQWW0jgrtDGMFl+fUWigfyn
 github.com/ONSdigital/dp-healthcheck v1.2.3/go.mod h1:XUhXoDIWPCdletDtpDOoXhmDFcc9b/kbedx96jN75aI=
 github.com/ONSdigital/dp-import v1.2.1 h1:IySfrNsrsWaqFAVgZSaOEaE5StVUJ1TJIZgVAFdBIxk=
 github.com/ONSdigital/dp-import v1.2.1/go.mod h1:WTsFDrvob+eTEj/JIuzUWdwLhHPRf3KETVDT9fEK+88=
+github.com/ONSdigital/dp-import v1.3.0 h1:6f6NuEkXqYCOXIoKaBmZ2yfAV4g64+eeinlvvx4UMfU=
+github.com/ONSdigital/dp-import v1.3.0/go.mod h1:WTsFDrvob+eTEj/JIuzUWdwLhHPRf3KETVDT9fEK+88=
+github.com/ONSdigital/dp-import v1.3.1 h1:Q9JYyBry72BUcG9ovDI5pce0lUVoLupUnxwyArIrIGU=
+github.com/ONSdigital/dp-import v1.3.1/go.mod h1:WTsFDrvob+eTEj/JIuzUWdwLhHPRf3KETVDT9fEK+88=
 github.com/ONSdigital/dp-kafka/v2 v2.2.0 h1:4s9VfmUxi70WpaRZk/CbxDNGqcJTsNTE9aLaLgcn4n4=
 github.com/ONSdigital/dp-kafka/v2 v2.2.0/go.mod h1:lFw9GGYpW8N6dG7g2wLQgCJL9vpo17RvOzCsdMRCapQ=
 github.com/ONSdigital/dp-kafka/v3 v3.1.1 h1:OIHQbOYg2FU7npxlvdpm+WUUTAaJ2qwZRLV1PUDKhZA=
