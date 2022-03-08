@@ -8,7 +8,7 @@ require (
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.8.1
 	github.com/ONSdigital/dp-component-test v0.6.3
 	github.com/ONSdigital/dp-healthcheck v1.2.3
-	github.com/ONSdigital/dp-import v1.2.1
+	github.com/ONSdigital/dp-import v1.3.1
 	github.com/ONSdigital/dp-kafka/v3 v3.1.1
 	github.com/ONSdigital/dp-net v1.2.0
 	github.com/ONSdigital/log.go/v2 v2.0.9
