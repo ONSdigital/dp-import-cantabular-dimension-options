@@ -39,10 +39,12 @@ var (
 	testJobID      = "test-job-id"
 	testBlob       = "test-blob"
 	ctx            = context.Background()
+	testDimID      = "city"
+	testDimName    = "geography"
 	testEvent      = &event.CategoryDimensionImport{
 		InstanceID:     testInstanceID,
 		JobID:          testJobID,
-		DimensionID:    "test-variable",
+		DimensionID:    testDimID,
 		CantabularBlob: testBlob,
 		IsGeography:    false,
 	}
@@ -76,7 +78,7 @@ func TestHandle(t *testing.T) {
 				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 1)
 				So(ctblrClient.GetDimensionOptionsCalls()[0].Req, ShouldResemble, cantabular.GetDimensionOptionsRequest{
 					Dataset:        "test-blob",
-					DimensionNames: []string{"test-variable"},
+					DimensionNames: []string{testDimID},
 				})
 			})
 
@@ -97,15 +99,15 @@ func TestHandle(t *testing.T) {
 						Code:     "code1",
 						Option:   "code1",
 						Label:    "Code 1",
-						CodeList: "test-variable",
-						Name:     "Test Variable",
+						CodeList: testDimID,
+						Name:     testDimName,
 					},
 					{
 						Code:     "code2",
 						Option:   "code2",
 						Label:    "Code 2",
-						CodeList: "test-variable",
-						Name:     "Test Variable",
+						CodeList: testDimID,
+						Name:     testDimName,
 					},
 				})
 
@@ -117,8 +119,8 @@ func TestHandle(t *testing.T) {
 						Code:     "code3",
 						Option:   "code3",
 						Label:    "Code 3",
-						CodeList: "test-variable",
-						Name:     "Test Variable",
+						CodeList: testDimID,
+						Name:     testDimName,
 					},
 				})
 			})
@@ -311,16 +313,11 @@ func TestHandle(t *testing.T) {
 			}
 		}
 		datasetAPIClient.GetInstanceFunc = func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
-			inst := dataset.Instance{
-				Version: dataset.Version{
-					State: dataset.StateCompleted.String(),
-				},
-			}
 			switch len(datasetAPIClient.PatchInstanceDimensionsCalls()) {
 			case 0, 1:
-				return inst, testETag, nil
+				return testDatasetInstance, testETag, nil
 			default:
-				return inst, newETag, nil
+				return testDatasetInstance, newETag, nil
 			}
 		}
 		importAPIClient := importAPIClientHappy(false, false)
@@ -335,7 +332,7 @@ func TestHandle(t *testing.T) {
 				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 1)
 				So(ctblrClient.GetDimensionOptionsCalls()[0].Req, ShouldResemble, cantabular.GetDimensionOptionsRequest{
 					Dataset:        "test-blob",
-					DimensionNames: []string{"test-variable"},
+					DimensionNames: []string{testDimID},
 				})
 			})
 
@@ -358,15 +355,15 @@ func TestHandle(t *testing.T) {
 						Code:     "code1",
 						Option:   "code1",
 						Label:    "Code 1",
-						CodeList: "test-variable",
-						Name:     "Test Variable",
+						CodeList: testDimID,
+						Name:     testDimName,
 					},
 					{
 						Code:     "code2",
 						Option:   "code2",
 						Label:    "Code 2",
-						CodeList: "test-variable",
-						Name:     "Test Variable",
+						CodeList: testDimID,
+						Name:     testDimName,
 					},
 				})
 
@@ -378,8 +375,8 @@ func TestHandle(t *testing.T) {
 						Code:     "code3",
 						Option:   "code3",
 						Label:    "Code 3",
-						CodeList: "test-variable",
-						Name:     "Test Variable",
+						CodeList: testDimID,
+						Name:     testDimName,
 					},
 				})
 
@@ -391,8 +388,8 @@ func TestHandle(t *testing.T) {
 						Code:     "code3",
 						Option:   "code3",
 						Label:    "Code 3",
-						CodeList: "test-variable",
-						Name:     "Test Variable",
+						CodeList: testDimID,
+						Name:     testDimName,
 					},
 				})
 			})
@@ -433,11 +430,7 @@ func TestHandleFailure(t *testing.T) {
 		ctblrClient := cantabularClientUnhappy()
 		datasetAPIClient := &mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
-				return dataset.Instance{
-					Version: dataset.Version{
-						State: dataset.StateCompleted.String(),
-					},
-				}, testETag, nil
+				return testDatasetInstance, testETag, nil
 			},
 			PutInstanceStateFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 				return testETag, nil
@@ -478,11 +471,7 @@ func TestHandleFailure(t *testing.T) {
 		ctblrClient := cantabularInvalidResponse()
 		datasetAPIClient := &mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
-				return dataset.Instance{
-					Version: dataset.Version{
-						State: dataset.StateCompleted.String(),
-					},
-				}, testETag, nil
+				return testDatasetInstance, testETag, nil
 			},
 			PutInstanceStateFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 				return testETag, nil
@@ -541,11 +530,7 @@ func TestHandleFailure(t *testing.T) {
 		importAPIClient := importAPIClientHappy(false, false)
 		datasetAPIClient := &mock.DatasetAPIClientMock{
 			GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
-				return dataset.Instance{
-					Version: dataset.Version{
-						State: dataset.StateCompleted.String(),
-					},
-				}, testETag, nil
+				return testDatasetInstance, testETag, nil
 			},
 			PutInstanceStateFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 				return newETag, nil
@@ -614,11 +599,7 @@ func TestHandleFailure(t *testing.T) {
 			datasetAPIClient.GetInstanceFunc = func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
 				switch len(datasetAPIClient.GetInstanceCalls()) {
 				case 0:
-					return dataset.Instance{
-						Version: dataset.Version{
-							State: dataset.StateCompleted.String(),
-						},
-					}, testETag, nil
+					return testDatasetInstance, testETag, nil
 				default:
 					return dataset.Instance{
 						Version: dataset.Version{
@@ -809,13 +790,25 @@ var testDimensionOptionsResp = &cantabular.GetDimensionOptionsResponse{
 						{Code: "code3", Label: "Code 3"},
 					},
 					Variable: cantabular.VariableBase{
-						Name:  "test-variable",
-						Label: "Test Variable",
+						Name:  testDimID,
+						Label: testDimID,
 					},
 				},
 			},
 		},
 		// Size: 333,
+	},
+}
+
+var testDatasetInstance = dataset.Instance{
+	Version: dataset.Version{
+		Dimensions: []dataset.VersionDimension{
+			{
+				ID:   testDimID,
+				Name: testDimName,
+			},
+		},
+		State: dataset.StateCompleted.String(),
 	},
 }
 
@@ -853,11 +846,7 @@ func datasetAPIClientHappy() *mock.DatasetAPIClientMock {
 			return testETag, nil
 		},
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
-			return dataset.Instance{
-				Version: dataset.Version{
-					State: dataset.StateCompleted.String(),
-				},
-			}, testETag, nil
+			return testDatasetInstance, testETag, nil
 		},
 	}
 }
@@ -868,11 +857,7 @@ func datasetAPIClientHappyLastDimension() *mock.DatasetAPIClientMock {
 			return testETag, nil
 		},
 		GetInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, ifMatch string) (dataset.Instance, string, error) {
-			return dataset.Instance{
-				Version: dataset.Version{
-					State: dataset.StateCompleted.String(),
-				},
-			}, testETag, nil
+			return testDatasetInstance, testETag, nil
 		},
 		PutInstanceStateFunc: func(ctx context.Context, serviceAuthToken string, instanceID string, state dataset.State, ifMatch string) (string, error) {
 			return newETag, nil
