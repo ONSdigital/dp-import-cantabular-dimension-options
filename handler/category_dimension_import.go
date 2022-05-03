@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
@@ -165,13 +166,14 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 		optionsBatch := make([]*dataset.OptionPost, size)
 		for j := 0; j < size; j++ {
 			optionsBatch[j] = &dataset.OptionPost{
-				Name:     idNameLookup[dim.Variable.Name],
+				Name:     idNameLookup[strings.ToLower(dim.Variable.Name)],
 				CodeList: dim.Variable.Name,             // TODO can we assume this?
 				Code:     dim.Categories[offset+j].Code, // TODO can we assume this?
 				Option:   dim.Categories[offset+j].Code,
 				Label:    dim.Categories[offset+j].Label,
 			}
 		}
+
 		eTag, err = h.PatchInstanceDimensionsWithRetries(ctx, e, optionsBatch, eTag, 0)
 		if err != nil {
 			err = fmt.Errorf("error processing a batch of cantabular variable values as dimension options: %w", err)
