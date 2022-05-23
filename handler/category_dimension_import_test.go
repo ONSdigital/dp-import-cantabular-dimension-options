@@ -143,10 +143,6 @@ func TestHandle(t *testing.T) {
 			Convey("And no patch calls are performed to Dataset API", func() {
 				So(datasetAPIClient.PatchInstanceDimensionsCalls(), ShouldHaveLength, 0)
 			})
-
-			Convey("And we do not sleep between calls", func() {
-				So(sleepRandomCalls, ShouldHaveLength, 0)
-			})
 		})
 	})
 
