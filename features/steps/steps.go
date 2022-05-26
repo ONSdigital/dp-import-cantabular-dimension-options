@@ -123,6 +123,10 @@ func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string,
 		"query": cantabular.QueryDimensionOptions,
 		"variables": map[string]interface{}{
 			"dataset":   dataset,
+			"category":  "",
+			"limit":     20,
+			"offset":    0,
+			"text":      "",
 			"variables": []string{variable},
 		},
 	}); err != nil {
