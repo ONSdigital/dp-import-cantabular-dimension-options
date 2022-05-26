@@ -87,6 +87,7 @@ Feature: Import-Cantabular-Dimension-Options
     Then these instance-complete events are produced:
       | InstanceID        | CantabularBlob |
       | instance-happy-01 | Example        |
+      | instance-happy-01 | Example        |
 
   Scenario: Consuming a category-dimension-import event with correct fields but dimensions cannot be added
     When this category-dimension-import event is queued, to be consumed:

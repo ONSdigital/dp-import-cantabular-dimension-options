@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
@@ -83,34 +84,36 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg 
 	log.Info(ctx, "event received", logData)
 
 	// get instance state and check that it is in completed state
-	_, eTag, err := h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
+	instance, eTag, err := h.getCompletedInstance(ctx, e, headers.IfMatchAnyETag)
 	if err != nil {
 		return err
 	}
 
-	resp, err := h.ctblr.GetDimensionOptions(ctx, cantabular.GetDimensionOptionsRequest{
-		Dataset:        e.CantabularBlob,
-		DimensionNames: []string{e.DimensionID},
-	})
-	if err != nil {
-		// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.
-		// TODO we might want to retry this, once retries are implemented
-		return h.setImportToFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
-	}
+	if !e.IsGeography {
+		resp, err := h.ctblr.GetDimensionOptions(ctx, cantabular.GetDimensionOptionsRequest{
+			Dataset:        e.CantabularBlob,
+			DimensionNames: []string{e.DimensionID},
+		})
+		if err != nil {
+			// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.
+			// TODO we might want to retry this, once retries are implemented
+			return h.setImportToFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
+		}
 
-	// validate that there is exactly one Dataset in the response
-	if resp == nil || len(resp.Dataset.Table.Dimensions) != 1 {
-		logData["response"] = resp
-		err := NewError(errors.New("unexpected response from Cantabular server"), logData)
-		// set instance state to failed because cantabular response is invalid and the import process will be aborted.
-		return h.setImportToFailed(ctx, err, e)
-	}
+		// validate that there is exactly one Dataset in the response
+		if resp == nil || len(resp.Dataset.Table.Dimensions) != 1 {
+			logData["response"] = resp
+			err := NewError(errors.New("unexpected response from Cantabular server"), logData)
+			// set instance state to failed because cantabular response is invalid and the import process will be aborted.
+			return h.setImportToFailed(ctx, err, e)
+		}
 
-	// send variable values to dataset api in batches
-	dim := resp.Dataset.Table.Dimensions[0]
-	eTag, err = h.BatchPatchInstance(ctx, e, dim, eTag)
-	if err != nil {
-		return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
+		// send variable values to dataset api in batches
+		dim := resp.Dataset.Table.Dimensions[0]
+		eTag, err = h.BatchPatchInstance(ctx, e, dim, instance, eTag)
+		if err != nil {
+			return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
+		}
 	}
 
 	log.Info(ctx, "successfully sent all dimension options to dataset api for a dimension", logData)
@@ -145,23 +148,32 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg 
 }
 
 // BatchPatchInstance sends new dimension options to Dataset API, corresponding to the provided Cantabular variable, in batches of up to BatchSizeLimit
-func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *event.CategoryDimensionImport, dim cantabular.Dimension, eTag string) (newETag string, err error) {
+func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *event.CategoryDimensionImport, dim cantabular.Dimension, inst dataset.Instance, eTag string) (newETag string, err error) {
 	// Get batch splits for provided items
 	numFullChunks := len(dim.Categories) / h.cfg.BatchSizeLimit
 	remainingSize := len(dim.Categories) % h.cfg.BatchSizeLimit
+
+	// Create a lookup of dimension ID's to names, so that we can
+	// use a Cantabular name (e.g. `siblings_3`) to map to the name
+	// stored against the dimension (e.g. `siblings`).
+	idNameLookup := map[string]string{}
+	for _, dimInst := range inst.Dimensions {
+		idNameLookup[dimInst.ID] = dimInst.Name
+	}
 
 	// processBatch is a nested func to process a batch starting at the provided offset, with the provided size
 	processBatch := func(offset, size int) {
 		optionsBatch := make([]*dataset.OptionPost, size)
 		for j := 0; j < size; j++ {
 			optionsBatch[j] = &dataset.OptionPost{
-				Name:     dim.Variable.Name,
+				Name:     idNameLookup[strings.ToLower(dim.Variable.Name)],
 				CodeList: dim.Variable.Name,             // TODO can we assume this?
 				Code:     dim.Categories[offset+j].Code, // TODO can we assume this?
 				Option:   dim.Categories[offset+j].Code,
 				Label:    dim.Categories[offset+j].Label,
 			}
 		}
+
 		eTag, err = h.PatchInstanceDimensionsWithRetries(ctx, e, optionsBatch, eTag, 0)
 		if err != nil {
 			err = fmt.Errorf("error processing a batch of cantabular variable values as dimension options: %w", err)
