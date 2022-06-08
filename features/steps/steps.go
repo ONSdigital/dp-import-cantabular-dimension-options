@@ -114,7 +114,7 @@ func (c *Component) theFollowingInstanceIsAvailable(id string, instance *godog.D
 }
 
 // theFollowingCantabularCategoriesAreAvailable generates a mocked response for Cantabular Server
-// GET /v1/codebook/{name} with the provided query
+// GET /v10/codebook/{name} with the provided query
 func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string, variable string, cb *godog.DocString) error {
 	// Encode the graphQL query with the provided dataset and variables
 	var b bytes.Buffer
