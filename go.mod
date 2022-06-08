@@ -4,6 +4,8 @@ go 1.17
 
 replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
 
+// The following replacement is for module versions that have known vulnerabilities (from nancy sleuth)
+replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 
 require (
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.140.1
