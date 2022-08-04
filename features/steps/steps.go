@@ -9,14 +9,15 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cucumber/godog"
+	"github.com/google/go-cmp/cmp"
+	"github.com/rdumont/assistdog"
+
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/event"
 	"github.com/ONSdigital/dp-import-cantabular-dimension-options/schema"
 	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
-	"github.com/cucumber/godog"
-	"github.com/google/go-cmp/cmp"
-	"github.com/rdumont/assistdog"
 )
 
 const testETag = "13c7791bafdbaaf5e6660754feb1a58cd6aaa892"
@@ -85,7 +86,7 @@ func (c *Component) importAPIIsHealthy() error {
 func (c *Component) cantabularServerIsHealthy() error {
 	const res = `{"status": "OK"}`
 	c.CantabularSrv.NewHandler().
-		Get("/v9/datasets").
+		Get("/v10/datasets").
 		Reply(http.StatusOK).
 		BodyString(res)
 	return nil
@@ -114,7 +115,7 @@ func (c *Component) theFollowingInstanceIsAvailable(id string, instance *godog.D
 }
 
 // theFollowingCantabularCategoriesAreAvailable generates a mocked response for Cantabular Server
-// GET /v9/codebook/{name} with the provided query
+// GET /v10/codebook/{name} with the provided query
 func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string, variable string, cb *godog.DocString) error {
 	// Encode the graphQL query with the provided dataset and variables
 	var b bytes.Buffer
@@ -127,6 +128,8 @@ func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string,
 			"limit":     20,
 			"offset":    0,
 			"text":      "",
+			"base":      false,
+			"rule":      false,
 			"variables": []string{variable},
 		},
 	}); err != nil {
