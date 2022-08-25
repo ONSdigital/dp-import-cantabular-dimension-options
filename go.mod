@@ -8,17 +8,18 @@ exclude github.com/gorilla/sessions v1.2.1
 // to avoid the following vulnerabilities:
 //     - CVE-2022-29153 # pkg:golang/github.com/hashicorp/consul/api@v1.1.0
 //     - sonatype-2021-1401 # pkg:golang/github.com/miekg/dns@v1.0.14
-replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
-
-replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
+replace (
+	github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
+	github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
+)
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.159.1
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.163.0
 	github.com/ONSdigital/dp-component-test v0.7.0
 	github.com/ONSdigital/dp-healthcheck v1.3.0
 	github.com/ONSdigital/dp-import v1.3.1
 	github.com/ONSdigital/dp-kafka/v3 v3.3.2
-	github.com/ONSdigital/dp-net v1.4.1
+	github.com/ONSdigital/dp-net v1.5.0
 	github.com/ONSdigital/log.go/v2 v2.2.0
 	github.com/cucumber/godog v0.12.5
 	github.com/google/go-cmp v0.5.8
@@ -36,7 +37,7 @@ require (
 	github.com/ONSdigital/dp-mongodb-in-memory v1.3.1 // indirect
 	github.com/ONSdigital/dp-net/v2 v2.4.0 // indirect
 	github.com/Shopify/sarama v1.35.0 // indirect
-	github.com/aws/aws-sdk-go v1.44.64 // indirect
+	github.com/aws/aws-sdk-go v1.44.76 // indirect
 	github.com/chromedp/cdproto v0.0.0-20220725225757-5988d9195a6c // indirect
 	github.com/chromedp/chromedp v0.8.3 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
@@ -48,7 +49,6 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-avro/avro v0.0.0-20171219232920-444163702c11 // indirect
-	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.1.0 // indirect
@@ -74,7 +74,7 @@ require (
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/montanaflynn/stats v0.6.6 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -90,9 +90,9 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.10.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	golang.org/x/net v0.0.0-20220728030405-41545e8bf201 // indirect
+	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
