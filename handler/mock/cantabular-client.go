@@ -20,7 +20,10 @@ var _ handler.CantabularClient = &CantabularClientMock{}
 //
 // 		// make and configure a mocked handler.CantabularClient
 // 		mockedCantabularClient := &CantabularClientMock{
-// 			GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+// 			GetAggregatedDimensionOptionsFunc: func(contextMoqParam context.Context, getAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error) {
+// 				panic("mock out the GetAggregatedDimensionOptions method")
+// 			},
+// 			GetDimensionOptionsFunc: func(contextMoqParam context.Context, getDimensionOptionsRequest cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
 // 				panic("mock out the GetDimensionOptions method")
 // 			},
 // 		}
@@ -30,50 +33,96 @@ var _ handler.CantabularClient = &CantabularClientMock{}
 //
 // 	}
 type CantabularClientMock struct {
+	// GetAggregatedDimensionOptionsFunc mocks the GetAggregatedDimensionOptions method.
+	GetAggregatedDimensionOptionsFunc func(contextMoqParam context.Context, getAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error)
+
 	// GetDimensionOptionsFunc mocks the GetDimensionOptions method.
-	GetDimensionOptionsFunc func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
+	GetDimensionOptionsFunc func(contextMoqParam context.Context, getDimensionOptionsRequest cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// GetAggregatedDimensionOptions holds details about calls to the GetAggregatedDimensionOptions method.
+		GetAggregatedDimensionOptions []struct {
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// GetAggregatedDimensionOptionsRequest is the getAggregatedDimensionOptionsRequest argument value.
+			GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
+		}
 		// GetDimensionOptions holds details about calls to the GetDimensionOptions method.
 		GetDimensionOptions []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Req is the req argument value.
-			Req cantabular.GetDimensionOptionsRequest
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// GetDimensionOptionsRequest is the getDimensionOptionsRequest argument value.
+			GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 		}
 	}
-	lockGetDimensionOptions sync.RWMutex
+	lockGetAggregatedDimensionOptions sync.RWMutex
+	lockGetDimensionOptions           sync.RWMutex
+}
+
+// GetAggregatedDimensionOptions calls GetAggregatedDimensionOptionsFunc.
+func (mock *CantabularClientMock) GetAggregatedDimensionOptions(contextMoqParam context.Context, getAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error) {
+	if mock.GetAggregatedDimensionOptionsFunc == nil {
+		panic("CantabularClientMock.GetAggregatedDimensionOptionsFunc: method is nil but CantabularClient.GetAggregatedDimensionOptions was just called")
+	}
+	callInfo := struct {
+		ContextMoqParam                      context.Context
+		GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
+	}{
+		ContextMoqParam:                      contextMoqParam,
+		GetAggregatedDimensionOptionsRequest: getAggregatedDimensionOptionsRequest,
+	}
+	mock.lockGetAggregatedDimensionOptions.Lock()
+	mock.calls.GetAggregatedDimensionOptions = append(mock.calls.GetAggregatedDimensionOptions, callInfo)
+	mock.lockGetAggregatedDimensionOptions.Unlock()
+	return mock.GetAggregatedDimensionOptionsFunc(contextMoqParam, getAggregatedDimensionOptionsRequest)
+}
+
+// GetAggregatedDimensionOptionsCalls gets all the calls that were made to GetAggregatedDimensionOptions.
+// Check the length with:
+//     len(mockedCantabularClient.GetAggregatedDimensionOptionsCalls())
+func (mock *CantabularClientMock) GetAggregatedDimensionOptionsCalls() []struct {
+	ContextMoqParam                      context.Context
+	GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
+} {
+	var calls []struct {
+		ContextMoqParam                      context.Context
+		GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
+	}
+	mock.lockGetAggregatedDimensionOptions.RLock()
+	calls = mock.calls.GetAggregatedDimensionOptions
+	mock.lockGetAggregatedDimensionOptions.RUnlock()
+	return calls
 }
 
 // GetDimensionOptions calls GetDimensionOptionsFunc.
-func (mock *CantabularClientMock) GetDimensionOptions(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+func (mock *CantabularClientMock) GetDimensionOptions(contextMoqParam context.Context, getDimensionOptionsRequest cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
 	if mock.GetDimensionOptionsFunc == nil {
 		panic("CantabularClientMock.GetDimensionOptionsFunc: method is nil but CantabularClient.GetDimensionOptions was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		Req cantabular.GetDimensionOptionsRequest
+		ContextMoqParam            context.Context
+		GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 	}{
-		Ctx: ctx,
-		Req: req,
+		ContextMoqParam:            contextMoqParam,
+		GetDimensionOptionsRequest: getDimensionOptionsRequest,
 	}
 	mock.lockGetDimensionOptions.Lock()
 	mock.calls.GetDimensionOptions = append(mock.calls.GetDimensionOptions, callInfo)
 	mock.lockGetDimensionOptions.Unlock()
-	return mock.GetDimensionOptionsFunc(ctx, req)
+	return mock.GetDimensionOptionsFunc(contextMoqParam, getDimensionOptionsRequest)
 }
 
 // GetDimensionOptionsCalls gets all the calls that were made to GetDimensionOptions.
 // Check the length with:
 //     len(mockedCantabularClient.GetDimensionOptionsCalls())
 func (mock *CantabularClientMock) GetDimensionOptionsCalls() []struct {
-	Ctx context.Context
-	Req cantabular.GetDimensionOptionsRequest
+	ContextMoqParam            context.Context
+	GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 } {
 	var calls []struct {
-		Ctx context.Context
-		Req cantabular.GetDimensionOptionsRequest
+		ContextMoqParam            context.Context
+		GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 	}
 	mock.lockGetDimensionOptions.RLock()
 	calls = mock.calls.GetDimensionOptions

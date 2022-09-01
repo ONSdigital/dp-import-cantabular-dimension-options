@@ -24,10 +24,13 @@ var _ service.CantabularClient = &CantabularClientMock{}
 // 			CheckerFunc: func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
 // 				panic("mock out the Checker method")
 // 			},
-// 			CheckerAPIExtFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+// 			CheckerAPIExtFunc: func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
 // 				panic("mock out the CheckerAPIExt method")
 // 			},
-// 			GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+// 			GetAggregatedDimensionOptionsFunc: func(contextMoqParam context.Context, getAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error) {
+// 				panic("mock out the GetAggregatedDimensionOptions method")
+// 			},
+// 			GetDimensionOptionsFunc: func(contextMoqParam context.Context, getDimensionOptionsRequest cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
 // 				panic("mock out the GetDimensionOptions method")
 // 			},
 // 		}
@@ -41,10 +44,13 @@ type CantabularClientMock struct {
 	CheckerFunc func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error
 
 	// CheckerAPIExtFunc mocks the CheckerAPIExt method.
-	CheckerAPIExtFunc func(ctx context.Context, state *healthcheck.CheckState) error
+	CheckerAPIExtFunc func(contextMoqParam context.Context, checkState *healthcheck.CheckState) error
+
+	// GetAggregatedDimensionOptionsFunc mocks the GetAggregatedDimensionOptions method.
+	GetAggregatedDimensionOptionsFunc func(contextMoqParam context.Context, getAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error)
 
 	// GetDimensionOptionsFunc mocks the GetDimensionOptions method.
-	GetDimensionOptionsFunc func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
+	GetDimensionOptionsFunc func(contextMoqParam context.Context, getDimensionOptionsRequest cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -57,22 +63,30 @@ type CantabularClientMock struct {
 		}
 		// CheckerAPIExt holds details about calls to the CheckerAPIExt method.
 		CheckerAPIExt []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// State is the state argument value.
-			State *healthcheck.CheckState
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// CheckState is the checkState argument value.
+			CheckState *healthcheck.CheckState
+		}
+		// GetAggregatedDimensionOptions holds details about calls to the GetAggregatedDimensionOptions method.
+		GetAggregatedDimensionOptions []struct {
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// GetAggregatedDimensionOptionsRequest is the getAggregatedDimensionOptionsRequest argument value.
+			GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
 		}
 		// GetDimensionOptions holds details about calls to the GetDimensionOptions method.
 		GetDimensionOptions []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Req is the req argument value.
-			Req cantabular.GetDimensionOptionsRequest
+			// ContextMoqParam is the contextMoqParam argument value.
+			ContextMoqParam context.Context
+			// GetDimensionOptionsRequest is the getDimensionOptionsRequest argument value.
+			GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 		}
 	}
-	lockChecker             sync.RWMutex
-	lockCheckerAPIExt       sync.RWMutex
-	lockGetDimensionOptions sync.RWMutex
+	lockChecker                       sync.RWMutex
+	lockCheckerAPIExt                 sync.RWMutex
+	lockGetAggregatedDimensionOptions sync.RWMutex
+	lockGetDimensionOptions           sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -111,33 +125,33 @@ func (mock *CantabularClientMock) CheckerCalls() []struct {
 }
 
 // CheckerAPIExt calls CheckerAPIExtFunc.
-func (mock *CantabularClientMock) CheckerAPIExt(ctx context.Context, state *healthcheck.CheckState) error {
+func (mock *CantabularClientMock) CheckerAPIExt(contextMoqParam context.Context, checkState *healthcheck.CheckState) error {
 	if mock.CheckerAPIExtFunc == nil {
 		panic("CantabularClientMock.CheckerAPIExtFunc: method is nil but CantabularClient.CheckerAPIExt was just called")
 	}
 	callInfo := struct {
-		Ctx   context.Context
-		State *healthcheck.CheckState
+		ContextMoqParam context.Context
+		CheckState      *healthcheck.CheckState
 	}{
-		Ctx:   ctx,
-		State: state,
+		ContextMoqParam: contextMoqParam,
+		CheckState:      checkState,
 	}
 	mock.lockCheckerAPIExt.Lock()
 	mock.calls.CheckerAPIExt = append(mock.calls.CheckerAPIExt, callInfo)
 	mock.lockCheckerAPIExt.Unlock()
-	return mock.CheckerAPIExtFunc(ctx, state)
+	return mock.CheckerAPIExtFunc(contextMoqParam, checkState)
 }
 
 // CheckerAPIExtCalls gets all the calls that were made to CheckerAPIExt.
 // Check the length with:
 //     len(mockedCantabularClient.CheckerAPIExtCalls())
 func (mock *CantabularClientMock) CheckerAPIExtCalls() []struct {
-	Ctx   context.Context
-	State *healthcheck.CheckState
+	ContextMoqParam context.Context
+	CheckState      *healthcheck.CheckState
 } {
 	var calls []struct {
-		Ctx   context.Context
-		State *healthcheck.CheckState
+		ContextMoqParam context.Context
+		CheckState      *healthcheck.CheckState
 	}
 	mock.lockCheckerAPIExt.RLock()
 	calls = mock.calls.CheckerAPIExt
@@ -145,34 +159,69 @@ func (mock *CantabularClientMock) CheckerAPIExtCalls() []struct {
 	return calls
 }
 
+// GetAggregatedDimensionOptions calls GetAggregatedDimensionOptionsFunc.
+func (mock *CantabularClientMock) GetAggregatedDimensionOptions(contextMoqParam context.Context, getAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error) {
+	if mock.GetAggregatedDimensionOptionsFunc == nil {
+		panic("CantabularClientMock.GetAggregatedDimensionOptionsFunc: method is nil but CantabularClient.GetAggregatedDimensionOptions was just called")
+	}
+	callInfo := struct {
+		ContextMoqParam                      context.Context
+		GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
+	}{
+		ContextMoqParam:                      contextMoqParam,
+		GetAggregatedDimensionOptionsRequest: getAggregatedDimensionOptionsRequest,
+	}
+	mock.lockGetAggregatedDimensionOptions.Lock()
+	mock.calls.GetAggregatedDimensionOptions = append(mock.calls.GetAggregatedDimensionOptions, callInfo)
+	mock.lockGetAggregatedDimensionOptions.Unlock()
+	return mock.GetAggregatedDimensionOptionsFunc(contextMoqParam, getAggregatedDimensionOptionsRequest)
+}
+
+// GetAggregatedDimensionOptionsCalls gets all the calls that were made to GetAggregatedDimensionOptions.
+// Check the length with:
+//     len(mockedCantabularClient.GetAggregatedDimensionOptionsCalls())
+func (mock *CantabularClientMock) GetAggregatedDimensionOptionsCalls() []struct {
+	ContextMoqParam                      context.Context
+	GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
+} {
+	var calls []struct {
+		ContextMoqParam                      context.Context
+		GetAggregatedDimensionOptionsRequest cantabular.GetAggregatedDimensionOptionsRequest
+	}
+	mock.lockGetAggregatedDimensionOptions.RLock()
+	calls = mock.calls.GetAggregatedDimensionOptions
+	mock.lockGetAggregatedDimensionOptions.RUnlock()
+	return calls
+}
+
 // GetDimensionOptions calls GetDimensionOptionsFunc.
-func (mock *CantabularClientMock) GetDimensionOptions(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+func (mock *CantabularClientMock) GetDimensionOptions(contextMoqParam context.Context, getDimensionOptionsRequest cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
 	if mock.GetDimensionOptionsFunc == nil {
 		panic("CantabularClientMock.GetDimensionOptionsFunc: method is nil but CantabularClient.GetDimensionOptions was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		Req cantabular.GetDimensionOptionsRequest
+		ContextMoqParam            context.Context
+		GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 	}{
-		Ctx: ctx,
-		Req: req,
+		ContextMoqParam:            contextMoqParam,
+		GetDimensionOptionsRequest: getDimensionOptionsRequest,
 	}
 	mock.lockGetDimensionOptions.Lock()
 	mock.calls.GetDimensionOptions = append(mock.calls.GetDimensionOptions, callInfo)
 	mock.lockGetDimensionOptions.Unlock()
-	return mock.GetDimensionOptionsFunc(ctx, req)
+	return mock.GetDimensionOptionsFunc(contextMoqParam, getDimensionOptionsRequest)
 }
 
 // GetDimensionOptionsCalls gets all the calls that were made to GetDimensionOptions.
 // Check the length with:
 //     len(mockedCantabularClient.GetDimensionOptionsCalls())
 func (mock *CantabularClientMock) GetDimensionOptionsCalls() []struct {
-	Ctx context.Context
-	Req cantabular.GetDimensionOptionsRequest
+	ContextMoqParam            context.Context
+	GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 } {
 	var calls []struct {
-		Ctx context.Context
-		Req cantabular.GetDimensionOptionsRequest
+		ContextMoqParam            context.Context
+		GetDimensionOptionsRequest cantabular.GetDimensionOptionsRequest
 	}
 	mock.lockGetDimensionOptions.RLock()
 	calls = mock.calls.GetDimensionOptions
