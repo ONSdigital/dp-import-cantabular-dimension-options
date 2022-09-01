@@ -121,7 +121,7 @@ func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string,
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
 	if err := enc.Encode(map[string]interface{}{
-		"query": cantabular.QueryDimensionOptions,
+		"query": cantabular.QueryAggregatedDimensionOptions,
 		"variables": map[string]interface{}{
 			"dataset":   dataset,
 			"category":  "",

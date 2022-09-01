@@ -10,26 +10,35 @@ Feature: Import-Cantabular-Dimension-Options
       {
         "data": {
           "dataset": {
-            "table": {
-              "dimensions": [
+            "variables": {
+              "edges": [
                 {
-                  "categories": [
-                    {
-                      "code": "0",
-                      "label": "London"
-                    },
-                    {
-                      "code": "1",
-                      "label": "Liverpool"
-                    },
-                    {
-                      "code": "2",
-                      "label": "Belfast"
-                    }
-                  ],
-                  "variable": {
+                  "node": {
+                    "name": "dimension-01",
                     "label": "Dimension 01",
-                    "name": "dimension-01"
+                    "categories": {
+                      "totalCount": 3,
+                      "edges": [
+                        {
+                          "node": {
+                            "code": "0",
+                            "label": "London"
+                          }
+                        },
+                        {
+                          "node": {
+                            "code": "1",
+                            "label": "Liverpool"
+                          }
+                        },
+                        {
+                          "node": {
+                            "code": "2",
+                            "label": "Belfast"
+                          }
+                        }
+                      ]
+                    }
                   }
                 }
               ]
