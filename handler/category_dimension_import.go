@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
+	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular/gql"
 	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
 	"github.com/ONSdigital/dp-api-clients-go/v2/headers"
 	"github.com/ONSdigital/dp-api-clients-go/v2/importapi"
@@ -90,27 +91,24 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg 
 	}
 
 	if !e.IsGeography {
-		resp, err := h.ctblr.GetDimensionOptions(ctx, cantabular.GetDimensionOptionsRequest{
+		resp, err := h.ctblr.GetAggregatedDimensionOptions(ctx, cantabular.GetAggregatedDimensionOptionsRequest{
 			Dataset:        e.CantabularBlob,
 			DimensionNames: []string{e.DimensionID},
 		})
 		if err != nil {
-			// set instance state to failed because cantabular data could not be obtained and the import process will be aborted.
 			// TODO we might want to retry this, once retries are implemented
 			return h.setImportToFailed(ctx, fmt.Errorf("error getting cantabular codebook: %w", err), e)
 		}
 
-		// validate that there is exactly one Dataset in the response
-		if resp == nil || len(resp.Dataset.Table.Dimensions) != 1 {
+		if resp == nil || len(resp.Dataset.Variables.Edges) != 1 {
 			logData["response"] = resp
 			err := NewError(errors.New("unexpected response from Cantabular server"), logData)
-			// set instance state to failed because cantabular response is invalid and the import process will be aborted.
 			return h.setImportToFailed(ctx, err, e)
 		}
 
 		// send variable values to dataset api in batches
-		dim := resp.Dataset.Table.Dimensions[0]
-		eTag, err = h.BatchPatchInstance(ctx, e, dim, instance, eTag)
+		dim := resp.Dataset.Variables.Edges[0].Node
+		eTag, err = h.BatchPatchInstance(ctx, e, &dim, instance, eTag)
 		if err != nil {
 			return fmt.Errorf("failed to send dimension options to dataset api in batched patches: %w", err)
 		}
@@ -137,7 +135,6 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg 
 		log.Info(ctx, "all dimensions in instance have been completely processed and kafka message has been sent", logData)
 	}
 	if importComplete {
-		// Import api update job to completed state
 		if err := h.importApi.UpdateImportJobState(ctx, e.JobID, h.cfg.ServiceAuthToken, importapi.StateCompleted); err != nil {
 			return fmt.Errorf("error updating import job to completed state: %w", err)
 		}
@@ -148,10 +145,9 @@ func (h *CategoryDimensionImport) Handle(ctx context.Context, workerID int, msg 
 }
 
 // BatchPatchInstance sends new dimension options to Dataset API, corresponding to the provided Cantabular variable, in batches of up to BatchSizeLimit
-func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *event.CategoryDimensionImport, dim cantabular.Dimension, inst dataset.Instance, eTag string) (newETag string, err error) {
-	// Get batch splits for provided items
-	numFullChunks := len(dim.Categories) / h.cfg.BatchSizeLimit
-	remainingSize := len(dim.Categories) % h.cfg.BatchSizeLimit
+func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *event.CategoryDimensionImport, dim *gql.Node, inst dataset.Instance, eTag string) (newETag string, err error) {
+	numFullChunks := len(dim.Categories.Edges) / h.cfg.BatchSizeLimit
+	remainingSize := len(dim.Categories.Edges) % h.cfg.BatchSizeLimit
 
 	// Create a lookup of dimension ID's to names, so that we can
 	// use a Cantabular name (e.g. `siblings_3`) to map to the name
@@ -166,11 +162,11 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 		optionsBatch := make([]*dataset.OptionPost, size)
 		for j := 0; j < size; j++ {
 			optionsBatch[j] = &dataset.OptionPost{
-				Name:     idNameLookup[strings.ToLower(dim.Variable.Name)],
-				CodeList: dim.Variable.Name,             // TODO can we assume this?
-				Code:     dim.Categories[offset+j].Code, // TODO can we assume this?
-				Option:   dim.Categories[offset+j].Code,
-				Label:    dim.Categories[offset+j].Label,
+				Name:     idNameLookup[strings.ToLower(dim.Name)],
+				CodeList: dim.Name,                                 // TODO can we assume this?
+				Code:     dim.Categories.Edges[offset+j].Node.Code, // TODO can we assume this?
+				Option:   dim.Categories.Edges[offset+j].Node.Code,
+				Label:    dim.Categories.Edges[offset+j].Node.Label,
 			}
 		}
 
@@ -194,7 +190,7 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 		offset := numFullChunks * h.cfg.BatchSizeLimit
 		processBatch(offset, remainingSize)
 		if err != nil {
-			return "", err // err was wrapped by processBatch call
+			return "", err
 		}
 	}
 

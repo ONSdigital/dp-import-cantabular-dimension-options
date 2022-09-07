@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
+	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular/gql"
 	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
 	"github.com/ONSdigital/dp-api-clients-go/v2/headers"
 	"github.com/ONSdigital/dp-api-clients-go/v2/importapi"
@@ -69,8 +70,8 @@ func TestHandle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
-				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 1)
-				So(ctblrClient.GetDimensionOptionsCalls()[0].Req, ShouldResemble, cantabular.GetDimensionOptionsRequest{
+				So(ctblrClient.GetAggregatedDimensionOptionsCalls(), ShouldHaveLength, 1)
+				So(ctblrClient.GetAggregatedDimensionOptionsCalls()[0].GetAggregatedDimensionOptionsRequest, ShouldResemble, cantabular.GetAggregatedDimensionOptionsRequest{
 					Dataset:        "test-blob",
 					DimensionNames: []string{testDimID},
 				})
@@ -131,7 +132,7 @@ func TestHandle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("Then the corresponding codebook obtained from cantabular should not have Dimension Options", func() {
-				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 0)
+				So(ctblrClient.GetAggregatedDimensionOptionsCalls(), ShouldHaveLength, 0)
 			})
 
 			Convey("And the corresponding instance is obtained from dataset API", func() {
@@ -313,8 +314,8 @@ func TestHandle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("Then the corresponding codebook is obtained from cantabular", func() {
-				So(ctblrClient.GetDimensionOptionsCalls(), ShouldHaveLength, 1)
-				So(ctblrClient.GetDimensionOptionsCalls()[0].Req, ShouldResemble, cantabular.GetDimensionOptionsRequest{
+				So(ctblrClient.GetAggregatedDimensionOptionsCalls(), ShouldHaveLength, 1)
+				So(ctblrClient.GetAggregatedDimensionOptionsCalls()[0].GetAggregatedDimensionOptionsRequest, ShouldResemble, cantabular.GetAggregatedDimensionOptionsRequest{
 					Dataset:        "test-blob",
 					DimensionNames: []string{testDimID},
 				})
@@ -481,14 +482,8 @@ func TestHandleFailure(t *testing.T) {
 			So(err, ShouldResemble, handler.NewError(
 				errors.New("unexpected response from Cantabular server"),
 				log.Data{
-					"event": testEvent,
-					"response": &cantabular.GetDimensionOptionsResponse{
-						Dataset: cantabular.StaticDatasetDimensionOptions{
-							Table: cantabular.DimensionsTable{
-								Dimensions: nil,
-							},
-						},
-					},
+					"event":    testEvent,
+					"response": &cantabular.GetAggregatedDimensionOptionsResponse{},
 				}),
 			)
 			validateFailed(datasetAPIClient, importAPIClient)
@@ -791,7 +786,44 @@ var testDimensionOptionsResp = &cantabular.GetDimensionOptionsResponse{
 				},
 			},
 		},
-		// Size: 333,
+	},
+}
+
+var testAggregatedDimensionOptionsResp = &cantabular.GetAggregatedDimensionOptionsResponse{
+	Dataset: gql.Dataset{
+		Variables: gql.Variables{
+			Edges: []gql.Edge{
+				{
+					Node: gql.Node{
+						Name:  testDimID,
+						Label: testDimID,
+						Categories: gql.Categories{
+							TotalCount: 3,
+							Edges: []gql.Edge{
+								{
+									Node: gql.Node{
+										Code:  "code1",
+										Label: "Code 1",
+									},
+								},
+								{
+									Node: gql.Node{
+										Code:  "code2",
+										Label: "Code 2",
+									},
+								},
+								{
+									Node: gql.Node{
+										Code:  "code3",
+										Label: "Code 3",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	},
 }
 
@@ -812,12 +844,18 @@ func cantabularClientHappy() *mock.CantabularClientMock {
 		GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
 			return testDimensionOptionsResp, nil
 		},
+		GetAggregatedDimensionOptionsFunc: func(context.Context, cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error) {
+			return testAggregatedDimensionOptionsResp, nil
+		},
 	}
 }
 
 func cantabularClientUnhappy() *mock.CantabularClientMock {
 	return &mock.CantabularClientMock{
 		GetDimensionOptionsFunc: func(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error) {
+			return nil, errCantabular
+		},
+		GetAggregatedDimensionOptionsFunc: func(context.Context, cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error) {
 			return nil, errCantabular
 		},
 	}
@@ -831,6 +869,9 @@ func cantabularInvalidResponse() *mock.CantabularClientMock {
 					Table: cantabular.DimensionsTable{},
 				},
 			}, nil
+		},
+		GetAggregatedDimensionOptionsFunc: func(context.Context, cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error) {
+			return &cantabular.GetAggregatedDimensionOptionsResponse{}, nil
 		},
 	}
 }

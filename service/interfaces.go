@@ -33,9 +33,10 @@ type HealthChecker interface {
 
 // CantabularClient defines the required CantabularClient methods
 type CantabularClient interface {
-	GetDimensionOptions(ctx context.Context, req cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
+	GetDimensionOptions(context.Context, cantabular.GetDimensionOptionsRequest) (*cantabular.GetDimensionOptionsResponse, error)
+	GetAggregatedDimensionOptions(context.Context, cantabular.GetAggregatedDimensionOptionsRequest) (*cantabular.GetAggregatedDimensionOptionsResponse, error)
 	Checker(context.Context, *healthcheck.CheckState) error
-	CheckerAPIExt(ctx context.Context, state *healthcheck.CheckState) error
+	CheckerAPIExt(context.Context, *healthcheck.CheckState) error
 }
 
 // DatasetAPIClient defines the required Dataset API methods
