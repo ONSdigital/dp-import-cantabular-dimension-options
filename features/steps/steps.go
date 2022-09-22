@@ -125,6 +125,7 @@ func (c *Component) theFollowingCantabularCategoriesAreAvailable(dataset string,
 		"variables": map[string]interface{}{
 			"dataset":   dataset,
 			"category":  "",
+			"filters":   nil,
 			"limit":     20,
 			"offset":    0,
 			"text":      "",
