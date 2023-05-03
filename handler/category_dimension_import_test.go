@@ -202,11 +202,10 @@ func TestHandle(t *testing.T) {
 			})
 
 			Convey("And the expected InstanceComplete event is sent to the kafka producer", func() {
-				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+				expectedBytes := event.InstanceComplete{
 					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
-				})
-				So(err, ShouldBeNil)
+				}
 				err = producer.WaitForMessageSent(schema.InstanceComplete, &expectedBytes, 5*time.Second)
 				So(err, ShouldBeNil)
 			})
@@ -257,11 +256,10 @@ func TestHandle(t *testing.T) {
 			})
 
 			Convey("And the expected InstanceComplete event is sent to the kafka producer", func() {
-				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+				expectedBytes := event.InstanceComplete{
 					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
-				})
-				So(err, ShouldBeNil)
+				}
 				err = producer.WaitForMessageSent(schema.InstanceComplete, &expectedBytes, 5*time.Second)
 				So(err, ShouldBeNil)
 			})
@@ -745,13 +743,12 @@ func TestHandleFailure(t *testing.T) {
 		}
 
 		testingCfg := testingCfg()
-		producer, _ := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
+		producer, err := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
 			BrokerAddrs: testingCfg.KafkaConfig.Addr,
 			Topic:       testingCfg.KafkaConfig.InstanceCompleteTopic,
-		}, &kafkatest.ProducerConfig{
-			ChannelBufferSize: 10,
-			InitAtCreation:    true,
-		})
+		}, nil)
+
+		So(err, ShouldBeNil)
 
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer.Mock)
 

@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-import-cantabular-dimension-options
 
-go 1.19
+go 1.20
 
 // to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
