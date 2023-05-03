@@ -175,10 +175,11 @@ func TestHandle(t *testing.T) {
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(true, true)
-		producer, _ := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
+		producer, err := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
 			BrokerAddrs: testingCfg.KafkaConfig.Addr,
 			Topic:       testingCfg.KafkaConfig.CategoryDimensionImportTopic,
 		}, nil)
+		So(err, ShouldBeNil)
 
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer.Mock)
 
@@ -232,10 +233,11 @@ func TestHandle(t *testing.T) {
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(true, false)
-		producer, _ := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
+		producer, err := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
 			BrokerAddrs: testingCfg.KafkaConfig.Addr,
 			Topic:       testingCfg.KafkaConfig.CategoryDimensionImportTopic,
 		}, nil)
+		So(err, ShouldBeNil)
 
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer.Mock)
 
@@ -747,7 +749,6 @@ func TestHandleFailure(t *testing.T) {
 			BrokerAddrs: testingCfg.KafkaConfig.Addr,
 			Topic:       testingCfg.KafkaConfig.InstanceCompleteTopic,
 		}, nil)
-
 		So(err, ShouldBeNil)
 
 		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer.Mock)
@@ -755,22 +756,18 @@ func TestHandleFailure(t *testing.T) {
 		Convey("Then when Handle is triggered, the expected error is returned", func(c C) {
 			msg := kafkaMessage(c, testEvent)
 			err := eventHandler.Handle(ctx, workerID, msg)
-			fmt.Println("THE ERROR RETURNED IS")
-			fmt.Println(err)
 
 			Convey("Then the expected error is returned", func() {
 				So(err, ShouldResemble, fmt.Errorf("error updating import job to completed state: %w", errImportAPI))
 			})
 
 			Convey("And the expected InstanceComplete event is sent to the kafka producer", func() {
-				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+				expectedBytes := event.InstanceComplete{
 					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
-				})
-				fmt.Println(expectedBytes)
+				}
+				err = producer.WaitForMessageSent(schema.InstanceComplete, &expectedBytes, 5*time.Second)
 				So(err, ShouldBeNil)
-				//err = producer.WaitForMessageSent(schema.InstanceComplete, expectedBytes, 5*time.Second)
-				//So(err, ShouldBeNil)
 			})
 		})
 	})
