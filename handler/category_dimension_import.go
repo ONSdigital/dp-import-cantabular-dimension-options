@@ -193,7 +193,6 @@ func (h *CategoryDimensionImport) BatchPatchInstance(ctx context.Context, e *eve
 			return "", err
 		}
 	}
-	// some stuff
 
 	return eTag, nil
 }
