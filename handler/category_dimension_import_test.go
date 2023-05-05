@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular"
 	"github.com/ONSdigital/dp-api-clients-go/v2/cantabular/gql"
@@ -44,6 +45,17 @@ var (
 	testDimName    = "geography"
 	testEvent      = newCategoryDimensionImportEvent(testDimID, false)
 )
+
+func testingCfg() config.Config {
+	return config.Config{
+		KafkaConfig: config.KafkaConfig{
+			Addr:                         []string{"localhost:9092", "localhost:9093"},
+			CategoryDimensionImportGroup: "dp-import-cantabular-dimension-options",
+			CategoryDimensionImportTopic: "cantabular-dataset-category-dimension-import",
+			InstanceCompleteTopic:        "cantabular-dataset-instance-complete",
+		},
+	}
+}
 
 func TestHandle(t *testing.T) {
 
@@ -158,14 +170,18 @@ func TestHandle(t *testing.T) {
 			handler.SleepRandom = originalSleepRandom
 		}()
 
+		testingCfg := testingCfg()
+
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(true, true)
-		producer := kafkatest.NewMessageProducerWithChannels(&kafka.ProducerChannels{
-			Output: make(chan []byte, 1),
-		}, true)
+		producer, err := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
+			BrokerAddrs: testingCfg.KafkaConfig.Addr,
+			Topic:       testingCfg.KafkaConfig.CategoryDimensionImportTopic,
+		}, nil)
+		So(err, ShouldBeNil)
 
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer.Mock)
 
 		Convey("When Handle is successfully triggered", func(c C) {
 			msg := kafkaMessage(c, testEvent)
@@ -187,13 +203,12 @@ func TestHandle(t *testing.T) {
 			})
 
 			Convey("And the expected InstanceComplete event is sent to the kafka producer", func() {
-				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+				expectedBytes := event.InstanceComplete{
 					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
-				})
+				}
+				err = producer.WaitForMessageSent(schema.InstanceComplete, &expectedBytes, 5*time.Second)
 				So(err, ShouldBeNil)
-				sentBytes := <-producer.Channels().Output
-				So(sentBytes, ShouldResemble, expectedBytes)
 			})
 
 			Convey("And we do not sleep between calls", func() {
@@ -213,14 +228,18 @@ func TestHandle(t *testing.T) {
 			handler.SleepRandom = originalSleepRandom
 		}()
 
+		testingCfg := testingCfg()
+
 		ctblrClient := cantabularClientHappy()
 		datasetAPIClient := datasetAPIClientHappyLastDimension()
 		importAPIClient := importAPIClientHappy(true, false)
-		producer := kafkatest.NewMessageProducerWithChannels(&kafka.ProducerChannels{
-			Output: make(chan []byte, 1),
-		}, true)
+		producer, err := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
+			BrokerAddrs: testingCfg.KafkaConfig.Addr,
+			Topic:       testingCfg.KafkaConfig.CategoryDimensionImportTopic,
+		}, nil)
+		So(err, ShouldBeNil)
 
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer.Mock)
 
 		Convey("When Handle is successfully triggered", func(c C) {
 			msg := kafkaMessage(c, testEvent)
@@ -239,13 +258,12 @@ func TestHandle(t *testing.T) {
 			})
 
 			Convey("And the expected InstanceComplete event is sent to the kafka producer", func() {
-				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+				expectedBytes := event.InstanceComplete{
 					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
-				})
+				}
+				err = producer.WaitForMessageSent(schema.InstanceComplete, &expectedBytes, 5*time.Second)
 				So(err, ShouldBeNil)
-				sentBytes := <-producer.Channels().Output
-				So(sentBytes, ShouldResemble, expectedBytes)
 			})
 
 			Convey("And we do not sleep between calls", func() {
@@ -725,11 +743,15 @@ func TestHandleFailure(t *testing.T) {
 		importAPIClient.UpdateImportJobStateFunc = func(ctx context.Context, jobID string, serviceToken string, newState importapi.State) error {
 			return errImportAPI
 		}
-		producer := kafkatest.NewMessageProducerWithChannels(&kafka.ProducerChannels{
-			Output: make(chan []byte, 1),
-		}, true)
 
-		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer)
+		testingCfg := testingCfg()
+		producer, err := kafkatest.NewProducer(ctx, &kafka.ProducerConfig{
+			BrokerAddrs: testingCfg.KafkaConfig.Addr,
+			Topic:       testingCfg.KafkaConfig.InstanceCompleteTopic,
+		}, nil)
+		So(err, ShouldBeNil)
+
+		eventHandler := handler.NewCategoryDimensionImport(testCfg, ctblrClient, datasetAPIClient, importAPIClient, producer.Mock)
 
 		Convey("Then when Handle is triggered, the expected error is returned", func(c C) {
 			msg := kafkaMessage(c, testEvent)
@@ -740,13 +762,12 @@ func TestHandleFailure(t *testing.T) {
 			})
 
 			Convey("And the expected InstanceComplete event is sent to the kafka producer", func() {
-				expectedBytes, err := schema.InstanceComplete.Marshal(&event.InstanceComplete{
+				expectedBytes := event.InstanceComplete{
 					InstanceID:     testInstanceID,
 					CantabularBlob: testBlob,
-				})
+				}
+				err = producer.WaitForMessageSent(schema.InstanceComplete, &expectedBytes, 5*time.Second)
 				So(err, ShouldBeNil)
-				sentBytes := <-producer.Channels().Output
-				So(sentBytes, ShouldResemble, expectedBytes)
 			})
 		})
 	})
@@ -945,5 +966,7 @@ func importAPIClientWithUpdateState() *mock.ImportAPIClientMock {
 func kafkaMessage(c C, e *event.CategoryDimensionImport) *kafkatest.Message {
 	b, err := schema.CategoryDimensionImport.Marshal(e)
 	c.So(err, ShouldBeNil)
-	return kafkatest.NewMessage(b, 0)
+	message, err := kafkatest.NewMessage(b, 0)
+	c.So(err, ShouldBeNil)
+	return message
 }
