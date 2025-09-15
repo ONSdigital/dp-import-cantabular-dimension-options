@@ -1,3 +1,11 @@
-CVE-2022-29153          # pkg:golang/github.com/hashicorp/consul/api@v1.1.0     - CWE-918: Server-Side Request Forgery (SSRF)   - 7.5/10 (High)
-                        # pkg:golang/github.com/hashicorp/consul/sdk@v0.1.1     - CWE-918: Server-Side Request Forgery (SSRF)   - 7.5/10 (High)
-CVE-2025-4673 # Ignored due to golang.org/x/net v0.41.0 being the latest release
+# Ignored since github.com/prometheus/client_golang@v0.9.3 isn't used in go.mod
+CVE-2022-21698
+CVE-2023-45142 
+
+# Ignored since golang.org/x/image@v0.0.0-20190802002840-cff245a6509b isn't used in go.mod
+CVE-2023-29407
+CVE-2023-29408
+CVE-2022-41727
+
+# Ignored since google.golang.org/protobuf@v1.26.0 isn't used in go.mod
+CVE-2024-24786
