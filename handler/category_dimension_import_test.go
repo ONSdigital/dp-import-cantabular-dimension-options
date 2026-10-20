@@ -546,7 +546,7 @@ func TestHandleFailure(t *testing.T) {
 		}
 
 		Convey("Where dataset API returns a 500 error on PostInstanceDimensions", func() {
-			errPostInstance := dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusInternalServerError}, "uri")
+			var errPostInstance error = dataset.NewDatasetAPIResponse(&http.Response{StatusCode: http.StatusInternalServerError}, "uri")
 			datasetAPIClient.PatchInstanceDimensionsFunc = func(ctx context.Context, serviceAuthToken string, instanceID string, upserts []*dataset.OptionPost, updates []*dataset.OptionUpdate, ifMatch string) (string, error) {
 				return "", errPostInstance
 			}
